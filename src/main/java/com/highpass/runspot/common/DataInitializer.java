@@ -6,6 +6,7 @@ import com.highpass.runspot.auth.domain.User;
 import com.highpass.runspot.auth.domain.UserRunningStats;
 import com.highpass.runspot.auth.domain.dao.UserRepository;
 import com.highpass.runspot.auth.domain.dao.UserRunningStatsRepository;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import com.highpass.runspot.session.domain.GenderPolicy;
 import com.highpass.runspot.session.domain.RunType;
 import com.highpass.runspot.session.domain.Session;
@@ -39,6 +40,7 @@ public class DataInitializer implements CommandLineRunner {
     private final SessionRepository sessionRepository;
     private final SessionParticipantRepository sessionParticipantRepository;
     private final UserRunningStatsRepository userRunningStatsRepository;
+    private final PasswordEncoder passwordEncoder;
 
     private final GeometryFactory geometryFactory = new GeometryFactory(new PrecisionModel(), 4326);
     private final Random random = new Random();
@@ -64,7 +66,7 @@ public class DataInitializer implements CommandLineRunner {
 
     private List<User> createUsers() {
         List<User> users = new ArrayList<>();
-        String password = "12341234";
+        String password = passwordEncoder.encode("12341234");
 
         // Admin User
         User admin = User.builder()
@@ -83,7 +85,7 @@ public class DataInitializer implements CommandLineRunner {
         // Normal Users (20명)
         for (int i = 1; i <= 20; i++) {
             Gender gender = (i % 2 == 0) ? Gender.FEMALE : Gender.MALE;
-            
+
             // 나이대 다양화
             AgeGroup ageGroup;
             int ageRand = random.nextInt(100);
@@ -109,7 +111,7 @@ public class DataInitializer implements CommandLineRunner {
                     .weeklyRunningGoal(random.nextInt(7) + 1)
                     .pacePreferenceSec(pace)
                     .build();
-            
+
             users.add(userRepository.save(user));
             userRunningStatsRepository.save(UserRunningStats.builder().user(user).build());
         }
@@ -123,26 +125,26 @@ public class DataInitializer implements CommandLineRunner {
         // 3. 세운상가 (종로3가~을지로4가 사이)
         // 4. 명동성당 (을지로 입구 쪽)
         double[][] safeZones = {
-            {126.9925, 37.5685}, // 청계천 (장교교 인근)
-            {126.9905, 37.5665}, // 을지로3가역 (노가리 골목)
-            {126.9955, 37.5670}, // 세운상가 앞
-            {126.9870, 37.5630}  // 명동성당 인근
+                {126.9925, 37.5685}, // 청계천 (장교교 인근)
+                {126.9905, 37.5665}, // 을지로3가역 (노가리 골목)
+                {126.9955, 37.5670}, // 세운상가 앞
+                {126.9870, 37.5630}  // 명동성당 인근
         };
 
         String[] titles = {
-                "퇴근 후 힙지로 러닝", "청계천 야간 5km", "을지로 골목 탐방 러닝", 
+                "퇴근 후 힙지로 러닝", "청계천 야간 5km", "을지로 골목 탐방 러닝",
                 "세운상가 한바퀴", "명동성당 찍고 오기", "초보자 환영 천천히 뜁니다",
                 "도심 속 시티런", "러닝 끝나고 만선호프?", "주말 아침 청계천", "직장인 스트레스 해소"
         };
 
         for (int i = 0; i < 25; i++) {
             User host = users.get(random.nextInt(users.size()));
-            
+
             // 안전 구역 중 하나 선택 후 약간의 랜덤 오차
             double[] zone = safeZones[random.nextInt(safeZones.length)];
             double startX = zone[0] + (random.nextDouble() - 0.5) * 0.003;
             double startY = zone[1] + (random.nextDouble() - 0.5) * 0.003;
-            
+
             Point location = geometryFactory.createPoint(new Coordinate(startX, startY));
             List<Session.RoutePoint> route = createDummyRoute(startX, startY);
 
@@ -170,7 +172,7 @@ public class DataInitializer implements CommandLineRunner {
         List<Session.RoutePoint> route = new ArrayList<>();
         double currentX = startX;
         double currentY = startY;
-        
+
         route.add(new Session.RoutePoint(BigDecimal.valueOf(currentX), BigDecimal.valueOf(currentY)));
 
         // 5~10개의 점을 이어 경로 생성
@@ -184,10 +186,10 @@ public class DataInitializer implements CommandLineRunner {
 
     private void addParticipants(Session session, List<User> users, User host) {
         int participantCount = random.nextInt(session.getCapacity()); // 0 ~ 정원 미만
-        
+
         String[] messages = {
-            "잘 부탁드립니다!", "열심히 뛰겠습니다", "초보인데 괜찮을까요?", 
-            "시간 맞춰 가겠습니다", "안녕하세요~", "반갑습니다!", "화이팅!"
+                "잘 부탁드립니다!", "열심히 뛰겠습니다", "초보인데 괜찮을까요?",
+                "시간 맞춰 가겠습니다", "안녕하세요~", "반갑습니다!", "화이팅!"
         };
 
         for (int i = 0; i < participantCount; i++) {
@@ -209,7 +211,7 @@ public class DataInitializer implements CommandLineRunner {
                     .attendanceStatus(AttendanceStatus.ABSENT) // 기본값
                     .messageToHost(messages[random.nextInt(messages.length)])
                     .build();
-            
+
             sessionParticipantRepository.save(participant);
         }
     }
