@@ -41,7 +41,8 @@ public class SecurityConfig {
                                 "/sessions/search/nearby",
                                 "/sessions/search/markers",
                                 "/sessions/*/summary",
-                                "/sessions/*").permitAll()
+                                "/sessions/*",
+                                "/health").permitAll()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
