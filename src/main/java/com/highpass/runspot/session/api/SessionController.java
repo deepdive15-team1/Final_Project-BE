@@ -28,6 +28,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Slice;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -214,6 +215,23 @@ public class SessionController {
         List<SessionParticipantResponse> responses = sessionService.getAttendanceList(principal.getId(), sessionId);
 
         return ResponseEntity.ok(responses);
+    }
+
+    @Operation(summary = "세션 참여자 내보내기", description = "호스트가 세션 참여자를 강퇴합니다.")
+    @ApiResponse(responseCode = "204", description = "내보내기 성공")
+    @DeleteMapping("/{sessionId}/participants/{participationId}")
+    public ResponseEntity<Void> kickParticipant(
+            @PathVariable Long sessionId,
+            @PathVariable Long participationId,
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
+        if (principal == null) {
+            throw new IllegalStateException("로그인이 필요합니다.");
+        }
+
+        sessionService.kickParticipant(principal.getId(), sessionId, participationId);
+
+        return ResponseEntity.noContent().build();
     }
 
     @PatchMapping("/{sessionId}/participants/{participationId}/attendance")

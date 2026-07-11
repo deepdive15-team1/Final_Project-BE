@@ -20,6 +20,8 @@ import com.highpass.runspot.session.service.dto.response.SessionParticipantRespo
 import com.highpass.runspot.session.service.dto.response.SessionResponse;
 import com.highpass.runspot.session.domain.dao.SessionParticipantRepository;
 import com.highpass.runspot.session.domain.dao.SessionRepository;
+import com.highpass.runspot.session.exception.SessionErrorCode;
+import com.highpass.runspot.session.exception.SessionException;
 import java.math.BigDecimal;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -320,6 +322,29 @@ public class SessionService {
                     return MyCreatedRunningsResponse.from(session, currentParticipants);
                 })
                 .toList();
+    }
+
+    @Transactional
+    public void kickParticipant(Long userId, Long sessionId, Long participationId) {
+        Session session = sessionRepository.findById(sessionId)
+            .orElseThrow(() -> new SessionException(SessionErrorCode.SESSION_NOT_FOUND));
+
+        if (!Objects.equals(session.getHostUser().getId(), userId)) {
+            throw new SessionException(SessionErrorCode.KICK_NOT_HOST);
+        }
+
+        if (session.getStatus() != SessionStatus.OPEN && session.getStatus() != SessionStatus.CLOSED) {
+            throw new SessionException(SessionErrorCode.KICK_INVALID_STATUS);
+        }
+
+        SessionParticipant participant = sessionParticipantRepository.findById(participationId)
+            .orElseThrow(() -> new SessionException(SessionErrorCode.PARTICIPANT_NOT_FOUND));
+
+        if (!participant.getSession().getId().equals(sessionId)) {
+            throw new SessionException(SessionErrorCode.PARTICIPANT_SESSION_MISMATCH);
+        }
+
+        participant.kick();
     }
 
     private void validateGenderPolicy(GenderPolicy policy, Gender userGender) {
