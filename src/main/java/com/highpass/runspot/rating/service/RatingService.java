@@ -5,6 +5,8 @@ import com.highpass.runspot.auth.domain.dao.UserRepository;
 import com.highpass.runspot.rating.domain.Rating;
 import com.highpass.runspot.rating.domain.RatingTargetType;
 import com.highpass.runspot.rating.domain.dao.RatingRepository;
+import com.highpass.runspot.rating.exception.RatingErrorCode;
+import com.highpass.runspot.rating.exception.RatingException;
 import com.highpass.runspot.rating.service.dto.request.HostRatingRequest;
 import com.highpass.runspot.rating.service.dto.request.MemberRatingRequest;
 import com.highpass.runspot.session.domain.AttendanceStatus;
@@ -36,10 +38,10 @@ public class RatingService {
     @Transactional
     public void rateHost(Long userId, Long sessionId, HostRatingRequest request) {
         Session session = sessionRepository.findById(sessionId)
-                .orElseThrow(() -> new IllegalArgumentException("세션을 찾을 수 없습니다. ID: " + sessionId));
+                .orElseThrow(() -> new RatingException(RatingErrorCode.SESSION_NOT_FOUND));
 
         if (session.getStatus() != SessionStatus.FINISHED) {
-            throw new IllegalStateException("종료된 세션만 평가할 수 있습니다.");
+            throw new RatingException(RatingErrorCode.SESSION_NOT_FINISHED);
         }
 
         validateRaterEligibility(userId, sessionId);
@@ -47,7 +49,7 @@ public class RatingService {
         Long hostUserId = session.getHostUser().getId();
 
         if (ratingRepository.existsBySessionIdAndRaterIdAndTargetId(sessionId, userId, hostUserId)) {
-            throw new IllegalStateException("이미 호스트 평가를 완료했습니다.");
+            throw new RatingException(RatingErrorCode.ALREADY_RATED_HOST);
         }
 
         Rating rating = Rating.builder()
@@ -65,10 +67,10 @@ public class RatingService {
     @Transactional
     public void rateMembers(Long userId, Long sessionId, MemberRatingRequest request) {
         Session session = sessionRepository.findById(sessionId)
-                .orElseThrow(() -> new IllegalArgumentException("세션을 찾을 수 없습니다. ID: " + sessionId));
+                .orElseThrow(() -> new RatingException(RatingErrorCode.SESSION_NOT_FOUND));
 
         if (session.getStatus() != SessionStatus.FINISHED) {
-            throw new IllegalStateException("종료된 세션만 평가할 수 있습니다.");
+            throw new RatingException(RatingErrorCode.SESSION_NOT_FINISHED);
         }
 
         validateRaterEligibility(userId, sessionId);
@@ -97,21 +99,21 @@ public class RatingService {
                     Long targetId = item.targetUserId();
 
                     if (targetId.equals(userId)) {
-                        throw new IllegalArgumentException("자기 자신은 평가할 수 없습니다.");
+                        throw new RatingException(RatingErrorCode.SELF_RATING_NOT_ALLOWED);
                     }
                     if (targetId.equals(hostUserId)) {
-                        throw new IllegalArgumentException("호스트는 멤버 평가 대상이 아닙니다. 호스트 평가 API를 이용해주세요.");
+                        throw new RatingException(RatingErrorCode.HOST_NOT_MEMBER_TARGET);
                     }
                     if (alreadyRatedIds.contains(targetId)) {
-                        throw new IllegalStateException("이미 평가한 멤버가 포함되어 있습니다. targetUserId: " + targetId);
+                        throw new RatingException(RatingErrorCode.ALREADY_RATED_MEMBER);
                     }
                     if (!eligibleMemberIds.contains(targetId)) {
-                        throw new IllegalArgumentException("평가 대상이 해당 세션의 출석 참여자가 아닙니다. targetUserId: " + targetId);
+                        throw new RatingException(RatingErrorCode.TARGET_NOT_ELIGIBLE);
                     }
 
                     User target = targetUsersById.get(targetId);
                     if (target == null) {
-                        throw new IllegalArgumentException("사용자를 찾을 수 없습니다. ID: " + targetId);
+                        throw new RatingException(RatingErrorCode.TARGET_USER_NOT_FOUND);
                     }
 
                     return Rating.builder()
@@ -135,7 +137,7 @@ public class RatingService {
                         && sp.getAttendanceStatus() == AttendanceStatus.ATTENDED);
 
         if (!isEligible) {
-            throw new IllegalStateException("해당 세션에 출석한 참여자만 평가할 수 있습니다.");
+            throw new RatingException(RatingErrorCode.RATER_NOT_ELIGIBLE);
         }
     }
 }

@@ -8,11 +8,9 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
-import jakarta.persistence.ForeignKey;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
@@ -38,10 +36,6 @@ import org.hibernate.type.SqlTypes;
                         name = "uk_ratings_session_rater_target",
                         columnNames = {"session_id", "rater_id", "target_id"}
                 )
-        },
-        indexes = {
-                @Index(name = "idx_ratings_session_id", columnList = "session_id"),
-                @Index(name = "idx_ratings_target_id", columnList = "target_id")
         }
 )
 public class Rating extends BaseTimeEntity {
@@ -51,18 +45,15 @@ public class Rating extends BaseTimeEntity {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "session_id", nullable = false,
-            foreignKey = @ForeignKey(name = "fk_ratings_session"))
+    @JoinColumn(name = "session_id", nullable = false)
     private Session session;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "rater_id", nullable = false,
-            foreignKey = @ForeignKey(name = "fk_ratings_rater"))
+    @JoinColumn(name = "rater_id", nullable = false)
     private User rater;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "target_id", nullable = false,
-            foreignKey = @ForeignKey(name = "fk_ratings_target"))
+    @JoinColumn(name = "target_id", nullable = false)
     private User target;
 
     @Enumerated(EnumType.STRING)

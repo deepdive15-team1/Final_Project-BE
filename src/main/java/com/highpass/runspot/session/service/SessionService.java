@@ -20,6 +20,8 @@ import com.highpass.runspot.session.service.dto.response.SessionParticipantRespo
 import com.highpass.runspot.session.service.dto.response.SessionResponse;
 import com.highpass.runspot.session.domain.dao.SessionParticipantRepository;
 import com.highpass.runspot.session.domain.dao.SessionRepository;
+import com.highpass.runspot.session.exception.SessionErrorCode;
+import com.highpass.runspot.session.exception.SessionException;
 import java.math.BigDecimal;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -325,21 +327,21 @@ public class SessionService {
     @Transactional
     public void kickParticipant(Long userId, Long sessionId, Long participationId) {
         Session session = sessionRepository.findById(sessionId)
-            .orElseThrow(() -> new IllegalArgumentException("세션을 찾을 수 없습니다. ID: " + sessionId));
+            .orElseThrow(() -> new SessionException(SessionErrorCode.SESSION_NOT_FOUND));
 
         if (!Objects.equals(session.getHostUser().getId(), userId)) {
-            throw new IllegalStateException("호스트만 참여자를 내보낼 수 있습니다.");
+            throw new SessionException(SessionErrorCode.KICK_NOT_HOST);
         }
 
         if (session.getStatus() != SessionStatus.OPEN && session.getStatus() != SessionStatus.CLOSED) {
-            throw new IllegalStateException("모집 중이거나 마감된 세션에서만 참여자를 내보낼 수 있습니다.");
+            throw new SessionException(SessionErrorCode.KICK_INVALID_STATUS);
         }
 
         SessionParticipant participant = sessionParticipantRepository.findById(participationId)
-            .orElseThrow(() -> new IllegalArgumentException("참여 정보를 찾을 수 없습니다."));
+            .orElseThrow(() -> new SessionException(SessionErrorCode.PARTICIPANT_NOT_FOUND));
 
         if (!participant.getSession().getId().equals(sessionId)) {
-            throw new IllegalArgumentException("해당 세션의 참여자가 아닙니다.");
+            throw new SessionException(SessionErrorCode.PARTICIPANT_SESSION_MISMATCH);
         }
 
         participant.kick();
