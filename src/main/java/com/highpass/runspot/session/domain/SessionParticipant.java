@@ -76,4 +76,11 @@ public class SessionParticipant extends BaseTimeEntity {
     public void updateAttendance(AttendanceStatus attendanceStatus) {
         this.attendanceStatus = attendanceStatus;
     }
+
+    public void kick() {
+        if (this.status != ParticipationStatus.APPROVED && this.status != ParticipationStatus.REQUESTED) {
+            throw new IllegalStateException("승인 또는 대기 상태의 참여자만 내보낼 수 있습니다.");
+        }
+        this.status = ParticipationStatus.KICKED;
+    }
 }

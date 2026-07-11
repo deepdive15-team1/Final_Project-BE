@@ -322,6 +322,29 @@ public class SessionService {
                 .toList();
     }
 
+    @Transactional
+    public void kickParticipant(Long userId, Long sessionId, Long participationId) {
+        Session session = sessionRepository.findById(sessionId)
+            .orElseThrow(() -> new IllegalArgumentException("세션을 찾을 수 없습니다. ID: " + sessionId));
+
+        if (!Objects.equals(session.getHostUser().getId(), userId)) {
+            throw new IllegalStateException("호스트만 참여자를 내보낼 수 있습니다.");
+        }
+
+        if (session.getStatus() != SessionStatus.OPEN && session.getStatus() != SessionStatus.CLOSED) {
+            throw new IllegalStateException("모집 중이거나 마감된 세션에서만 참여자를 내보낼 수 있습니다.");
+        }
+
+        SessionParticipant participant = sessionParticipantRepository.findById(participationId)
+            .orElseThrow(() -> new IllegalArgumentException("참여 정보를 찾을 수 없습니다."));
+
+        if (!participant.getSession().getId().equals(sessionId)) {
+            throw new IllegalArgumentException("해당 세션의 참여자가 아닙니다.");
+        }
+
+        participant.kick();
+    }
+
     private void validateGenderPolicy(GenderPolicy policy, Gender userGender) {
         if (policy == GenderPolicy.MALE_ONLY && userGender != Gender.MALE) {
             throw new IllegalArgumentException("남성만 참여 가능한 세션입니다.");
