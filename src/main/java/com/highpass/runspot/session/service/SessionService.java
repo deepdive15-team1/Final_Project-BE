@@ -333,7 +333,7 @@ public class SessionService {
             throw new SessionException(SessionErrorCode.KICK_NOT_HOST);
         }
 
-        if (session.getStatus() != SessionStatus.OPEN && session.getStatus() != SessionStatus.CLOSED) {
+        if (session.getStatus() != SessionStatus.FINISHED) {
             throw new SessionException(SessionErrorCode.KICK_INVALID_STATUS);
         }
 
