@@ -89,8 +89,22 @@ public class Session extends BaseTimeEntity {
         this.status = SessionStatus.CLOSED;
     }
 
+    public void start(Long userId) {
+        validateHost(userId);
+        if (this.status == SessionStatus.IN_PROGRESS || this.status == SessionStatus.FINISHED) {
+            throw new IllegalStateException("이미 시작되었거나 종료된 세션입니다.");
+        }
+        if (this.status == SessionStatus.CANCELED) {
+            throw new IllegalStateException("취소된 세션은 시작할 수 없습니다.");
+        }
+        this.status = SessionStatus.IN_PROGRESS;
+    }
+
     public void finish(Long userId) {
         validateHost(userId);
+        if (this.status != SessionStatus.IN_PROGRESS) {
+            throw new IllegalStateException("러닝 중인 세션만 종료할 수 있습니다.");
+        }
         this.status = SessionStatus.FINISHED;
     }
 

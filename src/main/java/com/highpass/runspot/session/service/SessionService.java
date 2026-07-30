@@ -7,6 +7,8 @@ import com.highpass.runspot.auth.domain.dao.UserRepository;
 import com.highpass.runspot.auth.domain.dao.UserRunningStatsRepository;
 import com.highpass.runspot.auth.service.UserStatsService;
 import com.highpass.runspot.auth.service.dto.response.MyCreatedRunningsResponse;
+import com.highpass.runspot.rating.domain.RatingTargetType;
+import com.highpass.runspot.rating.domain.dao.RatingRepository;
 import com.highpass.runspot.session.domain.AttendanceStatus;
 import com.highpass.runspot.session.domain.GenderPolicy;
 import com.highpass.runspot.session.domain.ParticipationStatus;
@@ -40,6 +42,7 @@ public class SessionService {
     private final UserRunningStatsRepository userRunningStatsRepository;
     private final UserRepository userRepository;
     private final UserStatsService userStatsService;
+    private final RatingRepository ratingRepository;
 
     @Transactional
     public SessionResponse createSession(Long userId, SessionCreateRequest request) {
@@ -102,6 +105,14 @@ public class SessionService {
             .orElseThrow(() -> new IllegalArgumentException("세션을 찾을 수 없습니다. ID: " + sessionId));
 
         session.close(userId);
+    }
+
+    @Transactional
+    public void startSession(Long userId, Long sessionId) {
+        Session session = sessionRepository.findById(sessionId)
+            .orElseThrow(() -> new IllegalArgumentException("세션을 찾을 수 없습니다. ID: " + sessionId));
+
+        session.start(userId);
     }
 
     @Transactional
@@ -312,16 +323,40 @@ public class SessionService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다. ID: " + userId));
 
-        // OPEN 상태 우선, 그 다음 최신순으로 정렬하여 3개만 조회
-        List<Session> sessions = sessionRepository.findTop3ByHostUserOrderByStatusAscCreatedAtDesc(user);
+        // OPEN > CLOSED > IN_PROGRESS > FINISHED 순으로 정렬, 그 안에서는 최신순
+        // 러닝이 종료(FINISHED)되었더라도 호스트의 멤버 평가가 끝나지 않았다면 목록에 계속 노출
+        List<Session> sessions = sessionRepository.findByHostUserOrderByStatusAscCreatedAtDesc(user);
 
         return sessions.stream()
+                .filter(session -> !isFinishedAndRatingCompleted(session))
+                .limit(3)
                 .map(session -> {
                     int currentParticipants = (int) sessionParticipantRepository
                             .countBySessionIdAndStatus(session.getId(), ParticipationStatus.APPROVED);
                     return MyCreatedRunningsResponse.from(session, currentParticipants);
                 })
                 .toList();
+    }
+
+    private boolean isFinishedAndRatingCompleted(Session session) {
+        if (session.getStatus() != SessionStatus.FINISHED) {
+            return false;
+        }
+
+        long eligibleMemberCount = sessionParticipantRepository
+                .findBySessionIdAndStatusWithUser(session.getId(), ParticipationStatus.APPROVED)
+                .stream()
+                .filter(sp -> sp.getAttendanceStatus() == AttendanceStatus.ATTENDED)
+                .count();
+
+        if (eligibleMemberCount == 0) {
+            return true;
+        }
+
+        long ratedMemberCount = ratingRepository.countBySessionIdAndRaterIdAndTargetType(
+                session.getId(), session.getHostUser().getId(), RatingTargetType.MEMBER);
+
+        return ratedMemberCount >= eligibleMemberCount;
     }
 
     @Transactional
@@ -333,7 +368,7 @@ public class SessionService {
             throw new SessionException(SessionErrorCode.KICK_NOT_HOST);
         }
 
-        if (session.getStatus() != SessionStatus.FINISHED) {
+        if (session.getStatus() != SessionStatus.IN_PROGRESS) {
             throw new SessionException(SessionErrorCode.KICK_INVALID_STATUS);
         }
 

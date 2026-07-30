@@ -13,18 +13,18 @@ import org.springframework.data.repository.query.Param;
 
 public interface SessionRepository extends JpaRepository<Session, Long> {
     @Query("""
-        SELECT s FROM Session s 
-        WHERE s.hostUser = :hostUser 
-        ORDER BY 
-            CASE s.status 
-                WHEN 'OPEN' THEN 1 
-                WHEN 'CLOSED' THEN 2 
-                WHEN 'FINISHED' THEN 3 
+        SELECT s FROM Session s
+        WHERE s.hostUser = :hostUser
+        ORDER BY
+            CASE s.status
+                WHEN 'OPEN' THEN 1
+                WHEN 'CLOSED' THEN 2
+                WHEN 'IN_PROGRESS' THEN 3
+                WHEN 'FINISHED' THEN 4
             END ASC,
             s.createdAt DESC
-        LIMIT 3
         """)
-    List<Session> findTop3ByHostUserOrderByStatusAscCreatedAtDesc(@Param("hostUser") User hostUser);
+    List<Session> findByHostUserOrderByStatusAscCreatedAtDesc(@Param("hostUser") User hostUser);
            
     List<Session> findByStatusAndTitleContainingAndIdLessThanOrderByIdDesc(SessionStatus sessionStatus, String title, Long id, Pageable pageable);
 

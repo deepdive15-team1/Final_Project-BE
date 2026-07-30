@@ -73,9 +73,13 @@ public class RatingService {
             throw new RatingException(RatingErrorCode.SESSION_NOT_FINISHED);
         }
 
-        validateRaterEligibility(userId, sessionId);
-
         Long hostUserId = session.getHostUser().getId();
+
+        // 멤버 평가는 호스트 또는 해당 세션에 출석한 참여자가 할 수 있다
+        if (!userId.equals(hostUserId)) {
+            validateRaterEligibility(userId, sessionId);
+        }
+
         Set<Long> alreadyRatedIds = Set.copyOf(
                 ratingRepository.findTargetIdsBySessionIdAndRaterId(sessionId, userId));
 

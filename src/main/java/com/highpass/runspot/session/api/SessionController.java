@@ -129,6 +129,22 @@ public class SessionController {
         return ResponseEntity.ok().build();
     }
 
+    @Operation(summary = "러닝 시작", description = "출석 확정 후 러닝을 시작합니다. (강퇴 가능 상태로 전환)")
+    @PostMapping("/{sessionId}/start")
+    public ResponseEntity<Void> startSession(
+            @PathVariable Long sessionId,
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
+        if (principal == null) {
+            throw new IllegalStateException("로그인이 필요합니다.");
+        }
+
+        sessionService.startSession(principal.getId(), sessionId);
+
+        return ResponseEntity.ok().build();
+    }
+
+    @Operation(summary = "러닝 종료", description = "러닝을 종료합니다. (평가 가능 상태로 전환)")
     @PostMapping("/{sessionId}/finish")
     public ResponseEntity<Void> finishSession(
             @PathVariable Long sessionId,
