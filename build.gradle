@@ -52,6 +52,9 @@ dependencies {
 	implementation 'io.jsonwebtoken:jjwt-api:0.12.3'
 	runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.3'
 	runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.3'
+
+	// Sentry (에러 모니터링)
+	implementation 'io.sentry:sentry-spring-boot-starter-jakarta:8.51.0'
 }
 
 tasks.named('test') {

@@ -38,3 +38,5 @@ out/
 .vscode/
 
 application-secret.yml
+.env
+.env.properties

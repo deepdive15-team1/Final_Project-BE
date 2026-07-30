@@ -2,6 +2,7 @@ package com.highpass.runspot.common.exception.handler;
 
 import com.highpass.runspot.common.exception.BaseException;
 import com.highpass.runspot.common.exception.dto.ErrorResponse;
+import io.sentry.Sentry;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.support.DefaultMessageSourceResolvable;
@@ -48,5 +49,13 @@ public class ApiExceptionHandler {
 
         // 그 외 IllegalStateException은 상황에 따라 400 또는 500 (일단 400 권장)
         return ErrorResponse.of(HttpStatus.BAD_REQUEST, e.getMessage());
+    }
+
+    // 위에서 예상하지 못한 예외는 500으로 응답하고 Sentry로 즉시 보고한다
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ErrorResponse> handleUnexpected(final Exception e) {
+        log.error("Unexpected exception", e);
+        Sentry.captureException(e);
+        return ErrorResponse.of(HttpStatus.INTERNAL_SERVER_ERROR, "서버 내부 오류가 발생했습니다.");
     }
 }

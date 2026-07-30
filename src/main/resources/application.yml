@@ -24,6 +24,14 @@ jwt:
   access-token-expiration: 1800000    # 30분 (ms)
   refresh-token-expiration: 1209600000 # 14일 (ms)
 
+sentry:
+  dsn: ${SENTRY_DSN}
+  environment: ${SENTRY_ENVIRONMENT:local}
+  # 요청 헤더, IP 등 사용자 식별 정보를 함께 전송 (https://docs.sentry.io/platforms/java/guides/spring-boot/data-management/data-collected/)
+  send-default-pii: true
+  traces-sample-rate: 0.2
+  exception-resolver-order: -2147483647 # 최우선순위(Integer.MIN_VALUE)로 예외를 먼저 캡처
+
 ---
 spring:
   config:
@@ -37,3 +45,7 @@ server:
         same-site: none
         secure: true
         http-only: true
+
+sentry:
+  environment: prod
+  traces-sample-rate: 0.1
