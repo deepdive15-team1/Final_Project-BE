@@ -4,10 +4,14 @@ import com.highpass.runspot.auth.domain.RefreshToken;
 import com.highpass.runspot.auth.domain.User;
 import com.highpass.runspot.auth.domain.dao.RefreshTokenRepository;
 import com.highpass.runspot.auth.domain.dao.UserRepository;
+import com.highpass.runspot.auth.domain.dao.UserRunningStatsRepository;
 import com.highpass.runspot.auth.service.dto.request.LoginRequest;
 import com.highpass.runspot.auth.service.dto.request.SignupRequest;
 import com.highpass.runspot.auth.service.dto.response.TokenResponse;
 import com.highpass.runspot.common.jwt.JwtProvider;
+import com.highpass.runspot.rating.domain.dao.RatingRepository;
+import com.highpass.runspot.session.domain.dao.SessionParticipantRepository;
+import com.highpass.runspot.session.domain.dao.SessionRepository;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +26,10 @@ public class AuthService {
 
     private final UserRepository userRepository;
     private final RefreshTokenRepository refreshTokenRepository;
+    private final UserRunningStatsRepository userRunningStatsRepository;
+    private final RatingRepository ratingRepository;
+    private final SessionParticipantRepository sessionParticipantRepository;
+    private final SessionRepository sessionRepository;
     private final JwtProvider jwtProvider;
     private final PasswordEncoder passwordEncoder;
 
@@ -102,6 +110,16 @@ public class AuthService {
 
     @Transactional
     public void withdraw(Long userId) {
+        if (!userRepository.existsById(userId)) {
+            throw new IllegalArgumentException("존재하지 않는 사용자입니다");
+        }
+
+        // users를 참조하는 자식 레코드를 외래키 의존 순서대로 먼저 제거한다.
+        // 주최 세션에 달린 다른 사용자의 평가/참가 기록도 세션보다 먼저 삭제해야 한다.
+        ratingRepository.deleteAllRelatedToUser(userId);
+        sessionParticipantRepository.deleteAllRelatedToUser(userId);
+        sessionRepository.deleteByHostUserId(userId);
+        userRunningStatsRepository.deleteByUserId(userId);
         refreshTokenRepository.deleteByUserId(userId);
         userRepository.deleteById(userId);
     }

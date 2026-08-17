@@ -8,10 +8,15 @@ import org.locationtech.jts.geom.Geometry;
 import org.locationtech.jts.geom.Point;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface SessionRepository extends JpaRepository<Session, Long> {
+    @Modifying
+    @Query("DELETE FROM Session s WHERE s.hostUser.id = :userId")
+    void deleteByHostUserId(@Param("userId") Long userId);
+
     @Query("""
         SELECT s FROM Session s
         WHERE s.hostUser = :hostUser

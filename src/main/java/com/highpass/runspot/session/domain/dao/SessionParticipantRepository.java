@@ -8,10 +8,21 @@ import com.highpass.runspot.session.domain.SessionParticipant;
 import java.util.List;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface SessionParticipantRepository extends JpaRepository<SessionParticipant, Long> {
+
+    @Modifying
+    @Query("""
+            DELETE FROM SessionParticipant sp
+            WHERE sp.user.id = :userId
+               OR sp.session.id IN (
+                   SELECT s.id FROM Session s WHERE s.hostUser.id = :userId
+               )
+            """)
+    void deleteAllRelatedToUser(@Param("userId") Long userId);
 
     boolean existsBySessionAndUser(Session session, User user);
 
