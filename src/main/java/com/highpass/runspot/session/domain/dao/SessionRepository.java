@@ -3,22 +3,23 @@ package com.highpass.runspot.session.domain.dao;
 import com.highpass.runspot.auth.domain.User;
 import com.highpass.runspot.session.domain.Session;
 import com.highpass.runspot.session.domain.SessionStatus;
+import jakarta.persistence.LockModeType;
 import java.util.List;
+import java.util.Optional;
 import org.locationtech.jts.geom.Geometry;
 import org.locationtech.jts.geom.Point;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
-import org.springframework.data.jpa.repository.Lock;
-import jakarta.persistence.LockModeType;
-import java.util.Optional;
 
 public interface SessionRepository extends JpaRepository<Session, Long> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT s FROM Session s WHERE s.id = :id")
     Optional<Session> findByIdForUpdate(@Param("id") Long id);
+
     @Modifying
     @Query("DELETE FROM Session s WHERE s.hostUser.id = :userId")
     void deleteByHostUserId(@Param("userId") Long userId);

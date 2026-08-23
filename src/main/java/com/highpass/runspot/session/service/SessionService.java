@@ -218,12 +218,10 @@ public class SessionService {
             throw new IllegalStateException("호스트만 승인할 수 있습니다.");
         }
 
-        SessionParticipant participant = sessionParticipantRepository.findById(participationId)
+        SessionParticipant participant = sessionParticipantRepository.findByIdForUpdate(participationId)
             .orElseThrow(() -> new IllegalArgumentException("신청 정보를 찾을 수 없습니다."));
 
-        if (!participant.getSession().getId().equals(sessionId)) {
-            throw new SessionException(SessionErrorCode.PARTICIPANT_SESSION_MISMATCH);
-        }
+        validateParticipationSession(sessionId, participant);
 
         // 인원 마감 체크 (승인 시점에 다시 한번 체크)
         long approvedCount = sessionParticipantRepository.countBySessionIdAndStatus(sessionId, ParticipationStatus.APPROVED);
@@ -237,7 +235,7 @@ public class SessionService {
 
     @Transactional
     public void rejectJoinRequest(Long userId, Long sessionId, Long participationId) {
-        Session session = sessionRepository.findById(sessionId)
+        Session session = sessionRepository.findByIdForUpdate(sessionId)
             .orElseThrow(() -> new IllegalArgumentException("세션을 찾을 수 없습니다. ID: " + sessionId));
 
         // 호스트 검증
@@ -245,14 +243,17 @@ public class SessionService {
             throw new IllegalStateException("호스트만 거절할 수 있습니다.");
         }
 
-        SessionParticipant participant = sessionParticipantRepository.findById(participationId)
+        SessionParticipant participant = sessionParticipantRepository.findByIdForUpdate(participationId)
             .orElseThrow(() -> new IllegalArgumentException("신청 정보를 찾을 수 없습니다."));
 
-        if (!participant.getSession().getId().equals(sessionId)) {
-            throw new SessionException(SessionErrorCode.PARTICIPANT_SESSION_MISMATCH);
-        }
-
+        validateParticipationSession(sessionId, participant);
         participant.reject();
+    }
+
+    private void validateParticipationSession(Long sessionId, SessionParticipant participant) {
+        if (!Objects.equals(participant.getSession().getId(), sessionId)) {
+            throw new IllegalArgumentException("신청 정보가 해당 세션에 속하지 않습니다.");
+        }
     }
 
     public List<SessionParticipantResponse> getAttendanceList(Long userId, Long sessionId) {

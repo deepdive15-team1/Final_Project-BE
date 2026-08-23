@@ -5,14 +5,20 @@ import com.highpass.runspot.session.domain.AttendanceStatus;
 import com.highpass.runspot.session.domain.ParticipationStatus;
 import com.highpass.runspot.session.domain.Session;
 import com.highpass.runspot.session.domain.SessionParticipant;
+import jakarta.persistence.LockModeType;
 import java.util.List;
+import java.util.Optional;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface SessionParticipantRepository extends JpaRepository<SessionParticipant, Long> {
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT sp FROM SessionParticipant sp WHERE sp.id = :id")
+    Optional<SessionParticipant> findByIdForUpdate(@Param("id") Long id);
 
     @Modifying
     @Query("""

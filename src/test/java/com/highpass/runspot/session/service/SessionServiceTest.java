@@ -4,6 +4,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.highpass.runspot.auth.domain.User;
@@ -30,6 +33,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
@@ -68,8 +72,73 @@ class SessionServiceTest {
                 .id(id)
                 .hostUser(host)
                 .status(status)
+                .capacity(2)
                 .location(GeometryUtil.createPoint(BigDecimal.ZERO, BigDecimal.ZERO))
                 .build();
+    }
+
+    @Test
+    void 호스트가_요청된_참여자를_승인한다() {
+        Session session = session(10L, SessionStatus.OPEN);
+        SessionParticipant participant = participant(50L, session, ParticipationStatus.REQUESTED);
+        when(sessionRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(session));
+        when(sessionParticipantRepository.findByIdForUpdate(50L)).thenReturn(Optional.of(participant));
+        when(sessionParticipantRepository.countBySessionIdAndStatus(10L, ParticipationStatus.APPROVED))
+                .thenReturn(1L);
+
+        sessionService.approveJoinRequest(HOST_ID, 10L, 50L);
+
+        assertThat(participant.getStatus()).isEqualTo(ParticipationStatus.APPROVED);
+        InOrder lockOrder = inOrder(sessionRepository, sessionParticipantRepository);
+        lockOrder.verify(sessionRepository).findByIdForUpdate(10L);
+        lockOrder.verify(sessionParticipantRepository).findByIdForUpdate(50L);
+        lockOrder.verify(sessionParticipantRepository)
+                .countBySessionIdAndStatus(10L, ParticipationStatus.APPROVED);
+    }
+
+    @Test
+    void 호스트가_요청된_참여자를_거절한다() {
+        Session session = session(10L, SessionStatus.OPEN);
+        SessionParticipant participant = participant(50L, session, ParticipationStatus.REQUESTED);
+        when(sessionRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(session));
+        when(sessionParticipantRepository.findByIdForUpdate(50L)).thenReturn(Optional.of(participant));
+
+        sessionService.rejectJoinRequest(HOST_ID, 10L, 50L);
+
+        assertThat(participant.getStatus()).isEqualTo(ParticipationStatus.REJECTED);
+        InOrder lockOrder = inOrder(sessionRepository, sessionParticipantRepository);
+        lockOrder.verify(sessionRepository).findByIdForUpdate(10L);
+        lockOrder.verify(sessionParticipantRepository).findByIdForUpdate(50L);
+    }
+
+    @Test
+    void URL_세션과_다른_세션의_참여자는_승인할_수_없다() {
+        Session requestedSession = session(10L, SessionStatus.OPEN);
+        Session otherSession = session(20L, SessionStatus.OPEN);
+        SessionParticipant participant = participant(50L, otherSession, ParticipationStatus.REQUESTED);
+        when(sessionRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(requestedSession));
+        when(sessionParticipantRepository.findByIdForUpdate(50L)).thenReturn(Optional.of(participant));
+
+        assertThatThrownBy(() -> sessionService.approveJoinRequest(HOST_ID, 10L, 50L))
+                .isInstanceOf(IllegalArgumentException.class);
+
+        assertThat(participant.getStatus()).isEqualTo(ParticipationStatus.REQUESTED);
+        verify(sessionParticipantRepository, never())
+                .countBySessionIdAndStatus(any(), eq(ParticipationStatus.APPROVED));
+    }
+
+    @Test
+    void URL_세션과_다른_세션의_참여자는_거절할_수_없다() {
+        Session requestedSession = session(10L, SessionStatus.OPEN);
+        Session otherSession = session(20L, SessionStatus.OPEN);
+        SessionParticipant participant = participant(50L, otherSession, ParticipationStatus.REQUESTED);
+        when(sessionRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(requestedSession));
+        when(sessionParticipantRepository.findByIdForUpdate(50L)).thenReturn(Optional.of(participant));
+
+        assertThatThrownBy(() -> sessionService.rejectJoinRequest(HOST_ID, 10L, 50L))
+                .isInstanceOf(IllegalArgumentException.class);
+
+        assertThat(participant.getStatus()).isEqualTo(ParticipationStatus.REQUESTED);
     }
 
     @Test
@@ -189,11 +258,10 @@ class SessionServiceTest {
         SessionParticipant participant = SessionParticipant.builder()
                 .id(100L).session(other).user(User.builder().id(2L).build()).build();
         when(sessionRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(target));
-        when(sessionParticipantRepository.findById(100L)).thenReturn(Optional.of(participant));
+        when(sessionParticipantRepository.findByIdForUpdate(100L)).thenReturn(Optional.of(participant));
 
         assertThatThrownBy(() -> sessionService.approveJoinRequest(HOST_ID, 10L, 100L))
-                .isInstanceOf(SessionException.class)
-                .hasFieldOrPropertyWithValue("exceptionType", SessionErrorCode.PARTICIPANT_SESSION_MISMATCH);
+                .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
@@ -202,12 +270,21 @@ class SessionServiceTest {
         SessionParticipant participant = SessionParticipant.builder()
                 .id(100L).session(target).user(User.builder().id(2L).build()).build();
         when(sessionRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(target));
-        when(sessionParticipantRepository.findById(100L)).thenReturn(Optional.of(participant));
+        when(sessionParticipantRepository.findByIdForUpdate(100L)).thenReturn(Optional.of(participant));
         when(sessionParticipantRepository.countBySessionIdAndStatus(10L, ParticipationStatus.APPROVED))
                 .thenReturn(1L);
 
         assertThatThrownBy(() -> sessionService.approveJoinRequest(HOST_ID, 10L, 100L))
                 .isInstanceOf(SessionException.class)
                 .hasFieldOrPropertyWithValue("exceptionType", SessionErrorCode.SESSION_CAPACITY_EXCEEDED);
+    }
+
+    private SessionParticipant participant(Long id, Session session, ParticipationStatus status) {
+        return SessionParticipant.builder()
+                .id(id)
+                .session(session)
+                .user(User.builder().id(2L).build())
+                .status(status)
+                .build();
     }
 }
