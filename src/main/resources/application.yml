@@ -35,6 +35,10 @@ spring:
           initial-interval: 1000ms
           multiplier: 2
 
+notification:
+  reminder:
+    enabled: true
+
 server:
   port: 8080
 

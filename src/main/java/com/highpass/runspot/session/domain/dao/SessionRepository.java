@@ -4,6 +4,7 @@ import com.highpass.runspot.auth.domain.User;
 import com.highpass.runspot.session.domain.Session;
 import com.highpass.runspot.session.domain.SessionStatus;
 import jakarta.persistence.LockModeType;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import org.locationtech.jts.geom.Geometry;
@@ -16,6 +17,18 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface SessionRepository extends JpaRepository<Session, Long> {
+    @Query("""
+            SELECT s FROM Session s
+            JOIN FETCH s.hostUser
+            WHERE s.status IN ('OPEN', 'CLOSED')
+              AND s.startAt >= :startInclusive
+              AND s.startAt < :endExclusive
+            """)
+    List<Session> findStartReminderCandidates(
+            @Param("startInclusive") LocalDateTime startInclusive,
+            @Param("endExclusive") LocalDateTime endExclusive
+    );
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT s FROM Session s WHERE s.id = :id")
     Optional<Session> findByIdForUpdate(@Param("id") Long id);

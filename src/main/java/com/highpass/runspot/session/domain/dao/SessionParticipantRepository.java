@@ -6,6 +6,7 @@ import com.highpass.runspot.session.domain.ParticipationStatus;
 import com.highpass.runspot.session.domain.Session;
 import com.highpass.runspot.session.domain.SessionParticipant;
 import jakarta.persistence.LockModeType;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.Pageable;
@@ -16,6 +17,14 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface SessionParticipantRepository extends JpaRepository<SessionParticipant, Long> {
+    @Query("""
+            SELECT sp.session.id AS sessionId, sp.user.id AS userId
+            FROM SessionParticipant sp
+            WHERE sp.session.id IN :sessionIds
+              AND sp.status = 'APPROVED'
+            """)
+    List<ApprovedReminderRecipient> findApprovedReminderRecipients(@Param("sessionIds") Collection<Long> sessionIds);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT sp FROM SessionParticipant sp WHERE sp.id = :id")
     Optional<SessionParticipant> findByIdForUpdate(@Param("id") Long id);
@@ -62,4 +71,10 @@ public interface SessionParticipantRepository extends JpaRepository<SessionParti
 
     // 출석 처리된 세션 개수
     long countByUserIdAndStatusAndAttendanceStatus(Long userId, ParticipationStatus status, AttendanceStatus attendanceStatus);
+
+    interface ApprovedReminderRecipient {
+        Long getSessionId();
+
+        Long getUserId();
+    }
 }
