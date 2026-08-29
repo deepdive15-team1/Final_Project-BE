@@ -31,6 +31,9 @@ import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.context.ApplicationEventPublisher;
+import com.highpass.runspot.session.event.SessionCreatedEvent;
+import com.highpass.runspot.session.event.ParticipantApprovedEvent;
 
 @Service
 @RequiredArgsConstructor
@@ -43,6 +46,7 @@ public class SessionService {
     private final UserRepository userRepository;
     private final UserStatsService userStatsService;
     private final RatingRepository ratingRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
     public SessionResponse createSession(Long userId, SessionCreateRequest request) {
@@ -95,6 +99,7 @@ public class SessionService {
 
         Session session = request.toEntity(hostUser);
         Session savedSession = sessionRepository.save(session);
+        eventPublisher.publishEvent(new SessionCreatedEvent(savedSession.getId()));
 
         return SessionResponse.from(savedSession);
     }
@@ -223,6 +228,7 @@ public class SessionService {
         }
 
         participant.approve();
+        eventPublisher.publishEvent(new ParticipantApprovedEvent(sessionId, participant.getUser().getId()));
     }
 
     @Transactional
