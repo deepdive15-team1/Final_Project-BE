@@ -1,0 +1,2 @@
+package com.highpass.runspot.chat.repository;import com.highpass.runspot.chat.domain.*;import java.util.*;import org.springframework.data.jpa.repository.*;
+public interface ChatRoomMemberRepository extends JpaRepository<ChatRoomMember,Long>{@EntityGraph(attributePaths={"room","room.session","room.host","room.guest"})List<ChatRoomMember> findByUserIdAndLeftAtIsNullOrderByRoomLastMessageAtDesc(Long userId);Optional<ChatRoomMember> findByRoomIdAndUserIdAndLeftAtIsNull(Long roomId,Long userId);List<ChatRoomMember> findByRoomIdAndLeftAtIsNull(Long roomId);}
