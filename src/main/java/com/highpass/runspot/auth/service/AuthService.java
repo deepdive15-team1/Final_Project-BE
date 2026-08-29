@@ -9,6 +9,7 @@ import com.highpass.runspot.auth.service.dto.request.LoginRequest;
 import com.highpass.runspot.auth.service.dto.request.SignupRequest;
 import com.highpass.runspot.auth.service.dto.response.TokenResponse;
 import com.highpass.runspot.common.jwt.JwtProvider;
+import com.highpass.runspot.notification.domain.dao.NotificationRepository;
 import com.highpass.runspot.rating.domain.dao.RatingRepository;
 import com.highpass.runspot.session.domain.dao.SessionParticipantRepository;
 import com.highpass.runspot.session.domain.dao.SessionRepository;
@@ -27,6 +28,7 @@ public class AuthService {
     private final UserRepository userRepository;
     private final RefreshTokenRepository refreshTokenRepository;
     private final UserRunningStatsRepository userRunningStatsRepository;
+    private final NotificationRepository notificationRepository;
     private final RatingRepository ratingRepository;
     private final SessionParticipantRepository sessionParticipantRepository;
     private final SessionRepository sessionRepository;
@@ -116,6 +118,7 @@ public class AuthService {
 
         // users를 참조하는 자식 레코드를 외래키 의존 순서대로 먼저 제거한다.
         // 주최 세션에 달린 다른 사용자의 평가/참가 기록도 세션보다 먼저 삭제해야 한다.
+        notificationRepository.deleteAllRelatedToUser(userId);
         ratingRepository.deleteAllRelatedToUser(userId);
         sessionParticipantRepository.deleteAllRelatedToUser(userId);
         sessionRepository.deleteByHostUserId(userId);

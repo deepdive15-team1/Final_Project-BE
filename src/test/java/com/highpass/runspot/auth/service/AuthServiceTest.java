@@ -10,6 +10,7 @@ import com.highpass.runspot.auth.domain.dao.RefreshTokenRepository;
 import com.highpass.runspot.auth.domain.dao.UserRepository;
 import com.highpass.runspot.auth.domain.dao.UserRunningStatsRepository;
 import com.highpass.runspot.common.jwt.JwtProvider;
+import com.highpass.runspot.notification.domain.dao.NotificationRepository;
 import com.highpass.runspot.rating.domain.dao.RatingRepository;
 import com.highpass.runspot.session.domain.dao.SessionParticipantRepository;
 import com.highpass.runspot.session.domain.dao.SessionRepository;
@@ -27,6 +28,7 @@ class AuthServiceTest {
     @Mock private UserRepository userRepository;
     @Mock private RefreshTokenRepository refreshTokenRepository;
     @Mock private UserRunningStatsRepository userRunningStatsRepository;
+    @Mock private NotificationRepository notificationRepository;
     @Mock private RatingRepository ratingRepository;
     @Mock private SessionParticipantRepository sessionParticipantRepository;
     @Mock private SessionRepository sessionRepository;
@@ -41,6 +43,7 @@ class AuthServiceTest {
                 userRepository,
                 refreshTokenRepository,
                 userRunningStatsRepository,
+                notificationRepository,
                 ratingRepository,
                 sessionParticipantRepository,
                 sessionRepository,
@@ -57,6 +60,7 @@ class AuthServiceTest {
         authService.withdraw(userId);
 
         InOrder order = inOrder(
+                notificationRepository,
                 ratingRepository,
                 sessionParticipantRepository,
                 sessionRepository,
@@ -64,6 +68,7 @@ class AuthServiceTest {
                 refreshTokenRepository,
                 userRepository
         );
+        order.verify(notificationRepository).deleteAllRelatedToUser(userId);
         order.verify(ratingRepository).deleteAllRelatedToUser(userId);
         order.verify(sessionParticipantRepository).deleteAllRelatedToUser(userId);
         order.verify(sessionRepository).deleteByHostUserId(userId);
@@ -79,6 +84,7 @@ class AuthServiceTest {
 
         assertThrows(IllegalArgumentException.class, () -> authService.withdraw(userId));
 
+        verify(notificationRepository, never()).deleteAllRelatedToUser(userId);
         verify(ratingRepository, never()).deleteAllRelatedToUser(userId);
         verify(userRepository, never()).deleteById(userId);
     }

@@ -50,6 +50,10 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
     boolean existsByIdAndRecipientUserId(Long notificationId, Long recipientUserId);
 
     @Modifying(clearAutomatically = true)
+    @Query("DELETE FROM Notification n WHERE n.recipientUserId = :userId OR n.actorUserId = :userId")
+    int deleteAllRelatedToUser(@Param("userId") Long userId);
+
+    @Modifying(clearAutomatically = true)
     @Query("""
             UPDATE Notification n
             SET n.readAt = :readAt
