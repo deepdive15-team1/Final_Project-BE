@@ -1,0 +1,1 @@
+package com.highpass.runspot.chat.outbox;import org.springframework.data.jpa.repository.JpaRepository;public interface ChatInboxRepository extends JpaRepository<ChatInbox,Long>{boolean existsByEventId(Long eventId);}
