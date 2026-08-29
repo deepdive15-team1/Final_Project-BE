@@ -43,6 +43,8 @@ public class SecurityConfig {
                                 "/sessions/search/markers",
                                 "/sessions/*/summary",
                                 "/sessions/*",
+                                "/api/v1/posts",
+                                "/api/v1/posts/*",
                                 "/health").permitAll()
                         .anyRequest().authenticated()
                 )
