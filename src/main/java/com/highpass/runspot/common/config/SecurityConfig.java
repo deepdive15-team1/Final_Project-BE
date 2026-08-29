@@ -45,6 +45,7 @@ public class SecurityConfig {
                                 "/sessions/*",
                                 "/api/v1/posts",
                                 "/api/v1/posts/*",
+                                "/api/v1/posts/*/comments",
                                 "/health").permitAll()
                         .anyRequest().authenticated()
                 )

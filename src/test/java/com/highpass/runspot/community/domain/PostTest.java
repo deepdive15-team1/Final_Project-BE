@@ -66,4 +66,20 @@ class PostTest {
 
         assertThat(post.getStatus()).isEqualTo(PostStatus.DELETED);
     }
+
+    @Test
+    void 좋아요와_댓글_카운터는_음수가_되지_않는다() {
+        Post post = Post.create(author, BoardType.GENERAL, "제목", "내용", null,
+                PostStatus.PUBLISHED, List.of());
+
+        post.increaseLikeCount();
+        post.decreaseLikeCount();
+        post.decreaseLikeCount();
+        post.increaseCommentCount();
+        post.decreaseCommentCount();
+        post.decreaseCommentCount();
+
+        assertThat(post.getLikeCount()).isZero();
+        assertThat(post.getCommentCount()).isZero();
+    }
 }

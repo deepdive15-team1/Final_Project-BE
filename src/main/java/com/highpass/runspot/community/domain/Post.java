@@ -110,6 +110,14 @@ public class Post extends BaseTimeEntity {
         this.viewCount++;
     }
 
+    public void increaseLikeCount() { this.likeCount++; }
+
+    public void decreaseLikeCount() { if (this.likeCount > 0) this.likeCount--; }
+
+    public void increaseCommentCount() { this.commentCount++; }
+
+    public void decreaseCommentCount() { if (this.commentCount > 0) this.commentCount--; }
+
     private static void validateCourse(BoardType boardType, Long runningRecordId) {
         if (boardType == BoardType.COURSE && runningRecordId == null) {
             throw new CommunityException(CommunityErrorCode.INVALID_COURSE_POST);

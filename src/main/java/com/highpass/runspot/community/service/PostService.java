@@ -13,6 +13,8 @@ import com.highpass.runspot.community.dto.PostUpsertRequest;
 import com.highpass.runspot.community.exception.CommunityErrorCode;
 import com.highpass.runspot.community.exception.CommunityException;
 import com.highpass.runspot.community.repository.PostRepository;
+import com.highpass.runspot.community.repository.PostLikeRepository;
+import com.highpass.runspot.community.repository.PostScrapRepository;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -30,6 +32,8 @@ public class PostService {
 
     private final PostRepository postRepository;
     private final UserRepository userRepository;
+    private final PostLikeRepository postLikeRepository;
+    private final PostScrapRepository postScrapRepository;
 
     public PostListResponse getPosts(BoardType boardType, PostSort sort, String query, String cursor, int size) {
         int pageSize = Math.min(Math.max(size, 1), MAX_PAGE_SIZE);
@@ -48,7 +52,9 @@ public class PostService {
     public PostDetailResponse getPost(Long postId, Long viewerId) {
         Post post = findPublishedPost(postId);
         post.increaseViewCount();
-        return PostDetailResponse.from(post, viewerId);
+        boolean liked = viewerId != null && postLikeRepository.existsByPostIdAndUserId(postId, viewerId);
+        boolean scrapped = viewerId != null && postScrapRepository.existsByPostIdAndUserId(postId, viewerId);
+        return PostDetailResponse.from(post, viewerId, liked, scrapped);
     }
 
     @Transactional
@@ -57,7 +63,7 @@ public class PostService {
                 .orElseThrow(() -> new CommunityException(CommunityErrorCode.USER_NOT_FOUND));
         Post post = Post.create(author, request.boardType(), request.title(), request.content(),
                 request.runningRecordId(), request.status(), request.imageKeys());
-        return PostDetailResponse.from(postRepository.save(post), userId);
+        return PostDetailResponse.from(postRepository.save(post), userId, false, false);
     }
 
     @Transactional
@@ -66,7 +72,9 @@ public class PostService {
         post.validateOwner(userId);
         post.update(request.boardType(), request.title(), request.content(), request.runningRecordId(),
                 request.status(), request.imageKeys());
-        return PostDetailResponse.from(post, userId);
+        return PostDetailResponse.from(post, userId,
+                postLikeRepository.existsByPostIdAndUserId(postId, userId),
+                postScrapRepository.existsByPostIdAndUserId(postId, userId));
     }
 
     @Transactional

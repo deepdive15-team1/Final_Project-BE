@@ -19,15 +19,17 @@ public record PostDetailResponse(
         int commentCount,
         int viewCount,
         PostStatus status,
+        boolean liked,
+        boolean scrapped,
         boolean mine,
         LocalDateTime createdAt,
         LocalDateTime updatedAt
 ) {
-    public static PostDetailResponse from(Post post, Long viewerId) {
+    public static PostDetailResponse from(Post post, Long viewerId, boolean liked, boolean scrapped) {
         return new PostDetailResponse(post.getId(), post.getBoardType(), post.getTitle(), post.getContent(),
                 new AuthorResponse(post.getAuthor().getId(), post.getAuthor().getName(), post.getAuthor().getMannerTemp()),
                 post.getImages().stream().map(image -> image.getImageKey()).toList(), post.getRunningRecordId(),
-                post.getLikeCount(), post.getCommentCount(), post.getViewCount(), post.getStatus(),
+                post.getLikeCount(), post.getCommentCount(), post.getViewCount(), post.getStatus(), liked, scrapped,
                 viewerId != null && viewerId.equals(post.getAuthor().getId()), post.getCreatedAt(), post.getUpdatedAt());
     }
 
