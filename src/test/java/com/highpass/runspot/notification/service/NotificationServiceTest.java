@@ -82,6 +82,23 @@ class NotificationServiceTest {
     }
 
     @Test
+    void 참여_승인_알림은_기존_요청이_없어도_신청자에게_저장된다() {
+        when(notificationRepository.findByTypeAndParticipationIdAndRecipientUserIdAndActionStatus(
+                NotificationType.PARTICIPATION_REQUESTED,
+                PARTICIPATION_ID,
+                HOST_ID,
+                NotificationActionStatus.PENDING
+        )).thenReturn(Optional.empty());
+
+        notificationService.notifyParticipationApproved(participation);
+
+        Notification notification = capturedNotification();
+        assertNotification(notification, NotificationType.PARTICIPATION_APPROVED, APPLICANT_ID, HOST_ID,
+                "호스트", "참여가 확정되었습니다!", "[한강 야간 러닝] 참여 신청이 승인되었습니다.",
+                NotificationActionType.NAVIGATE, NotificationActionStatus.NONE);
+    }
+
+    @Test
     void 참여_거절_알림은_기존_요청이_없어도_신청자에게_저장된다() {
         when(notificationRepository.findByTypeAndParticipationIdAndRecipientUserIdAndActionStatus(
                 NotificationType.PARTICIPATION_REQUESTED,

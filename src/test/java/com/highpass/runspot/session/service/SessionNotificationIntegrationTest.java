@@ -62,12 +62,14 @@ class SessionNotificationIntegrationTest extends MySqlContainerSupport {
     private final List<Long> taskSessionIds = new ArrayList<>();
     private final List<Long> taskParticipantIds = new ArrayList<>();
     private final List<Long> taskNotificationIds = new ArrayList<>();
+    private final List<Long> taskUserIds = new ArrayList<>();
 
     @AfterEach
     void cleanTaskOwnedRows() {
         notificationRepository.deleteAllById(taskNotificationIds);
         sessionParticipantRepository.deleteAllById(taskParticipantIds);
         sessionRepository.deleteAllById(taskSessionIds);
+        userRepository.deleteAllById(taskUserIds);
     }
 
     @Test
@@ -162,13 +164,15 @@ class SessionNotificationIntegrationTest extends MySqlContainerSupport {
 
     private User user(String name) {
         long sequence = USER_SEQUENCE.incrementAndGet();
-        return userRepository.saveAndFlush(User.builder()
+        User user = userRepository.saveAndFlush(User.builder()
                 .username("session-notification-" + sequence)
                 .password("password")
                 .name(name)
                 .ageGroup(AgeGroup.TWENTIES)
                 .gender(Gender.MALE)
                 .build());
+        taskUserIds.add(user.getId());
+        return user;
     }
 
     private Session session(User host, String title) {
