@@ -1,2 +1,27 @@
-package com.highpass.runspot.chat.outbox;import com.fasterxml.jackson.core.JsonProcessingException;import com.fasterxml.jackson.databind.ObjectMapper;import lombok.RequiredArgsConstructor;import org.springframework.stereotype.Service;
-@Service @RequiredArgsConstructor public class ChatOutboxService{private final ChatOutboxRepository repository;private final ObjectMapper mapper;public void enqueue(Long messageId,Long roomId,Object payload){try{repository.save(ChatOutbox.pending(messageId,"/sub/chat/room/"+roomId,mapper.writeValueAsString(payload)));}catch(JsonProcessingException e){throw new IllegalStateException("채팅 이벤트 직렬화에 실패했습니다.",e);}}}
+package com.highpass.runspot.chat.outbox;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import lombok.RequiredArgsConstructor;
+
+import org.springframework.stereotype.Service;
+
+@Service
+@RequiredArgsConstructor
+public class ChatOutboxService {
+    private final ChatOutboxRepository repository;
+    private final ObjectMapper mapper;
+
+    public void enqueue(Long messageId, Long roomId, Object payload) {
+        try {
+            repository.save(
+                    ChatOutbox.pending(
+                            messageId,
+                            "/sub/chat/room/" + roomId,
+                            mapper.writeValueAsString(payload)));
+        } catch (JsonProcessingException e) {
+            throw new IllegalStateException("채팅 이벤트 직렬화에 실패했습니다.", e);
+        }
+    }
+}

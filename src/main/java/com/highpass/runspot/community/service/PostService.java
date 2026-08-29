@@ -20,8 +20,8 @@ import com.highpass.runspot.course.repository.CourseScrapRepository;
 import com.highpass.runspot.file.service.S3PresignService;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -46,7 +46,7 @@ public class PostService {
     public PostListResponse getPosts(BoardType boardType, PostSort sort, String query, String cursor, int size) {
         int pageSize = Math.min(Math.max(size, 1), MAX_PAGE_SIZE);
         String normalizedQuery = StringUtils.hasText(query) ? query.trim() : null;
-        Page<Post> page = sort == PostSort.POPULAR
+        Slice<Post> page = sort == PostSort.POPULAR
                 ? findPopular(boardType, normalizedQuery, cursor, pageSize)
                 : findLatest(boardType, normalizedQuery, cursor, pageSize);
         List<PostSummaryResponse> items = page.getContent().stream().map(PostSummaryResponse::from).toList();
@@ -114,12 +114,12 @@ public class PostService {
         post.delete();
     }
 
-    private Page<Post> findLatest(BoardType boardType, String query, String cursor, int size) {
+    private Slice<Post> findLatest(BoardType boardType, String query, String cursor, int size) {
         Long cursorId = cursor == null ? null : parseLong(cursor);
         return postRepository.findLatest(boardType, query, cursorId, PageRequest.of(0, size));
     }
 
-    private Page<Post> findPopular(BoardType boardType, String query, String cursor, int size) {
+    private Slice<Post> findPopular(BoardType boardType, String query, String cursor, int size) {
         if (cursor == null) {
             return postRepository.findPopular(boardType, query, null, null, PageRequest.of(0, size));
         }

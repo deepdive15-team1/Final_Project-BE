@@ -33,6 +33,8 @@ import org.hibernate.annotations.BatchSize;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Post extends BaseTimeEntity {
 
+    private static final int MAX_IMAGE_COUNT = 3;
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -114,13 +116,25 @@ public class Post extends BaseTimeEntity {
         this.viewCount++;
     }
 
-    public void increaseLikeCount() { this.likeCount++; }
+    public void increaseLikeCount() {
+        this.likeCount++;
+    }
 
-    public void decreaseLikeCount() { if (this.likeCount > 0) this.likeCount--; }
+    public void decreaseLikeCount() {
+        if (this.likeCount > 0) {
+            this.likeCount--;
+        }
+    }
 
-    public void increaseCommentCount() { this.commentCount++; }
+    public void increaseCommentCount() {
+        this.commentCount++;
+    }
 
-    public void decreaseCommentCount() { if (this.commentCount > 0) this.commentCount--; }
+    public void decreaseCommentCount() {
+        if (this.commentCount > 0) {
+            this.commentCount--;
+        }
+    }
 
     public void replaceTags(List<Tag> tags) {
         postTags.forEach(postTag -> postTag.getTag().unused());
@@ -138,7 +152,7 @@ public class Post extends BaseTimeEntity {
     }
 
     private static void validateImages(List<String> imageKeys) {
-        if (imageKeys.size() > 3) {
+        if (imageKeys.size() > MAX_IMAGE_COUNT) {
             throw new CommunityException(CommunityErrorCode.INVALID_IMAGE_COUNT);
         }
     }

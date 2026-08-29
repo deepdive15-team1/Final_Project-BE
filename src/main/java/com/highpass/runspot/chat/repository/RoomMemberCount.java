@@ -1,1 +1,7 @@
-package com.highpass.runspot.chat.repository;public interface RoomMemberCount{Long getRoomId();long getMemberCount();}
+package com.highpass.runspot.chat.repository;
+
+public interface RoomMemberCount {
+    Long getRoomId();
+
+    long getMemberCount();
+}

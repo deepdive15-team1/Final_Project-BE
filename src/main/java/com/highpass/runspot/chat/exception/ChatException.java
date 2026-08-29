@@ -1,1 +1,9 @@
-package com.highpass.runspot.chat.exception;import com.highpass.runspot.common.exception.BaseException;public class ChatException extends BaseException{public ChatException(ChatErrorCode code){super(code);}}
+package com.highpass.runspot.chat.exception;
+
+import com.highpass.runspot.common.exception.BaseException;
+
+public class ChatException extends BaseException {
+    public ChatException(ChatErrorCode code) {
+        super(code);
+    }
+}

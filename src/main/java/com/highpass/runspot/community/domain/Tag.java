@@ -1,2 +1,39 @@
-package com.highpass.runspot.community.domain;import jakarta.persistence.*;import lombok.AccessLevel;import lombok.Getter;import lombok.NoArgsConstructor;
-@Getter @Entity @Table(name="tags")@NoArgsConstructor(access=AccessLevel.PROTECTED)public class Tag{@Id @GeneratedValue(strategy=GenerationType.IDENTITY)private Long id;@Column(nullable=false,unique=true,length=30)private String name;@Column(name="usage_count",nullable=false)private int usageCount;public static Tag create(String name){Tag t=new Tag();t.name=name;return t;}public void used(){usageCount++;}public void unused(){if(usageCount>0)usageCount--;}}
+package com.highpass.runspot.community.domain;
+
+import jakarta.persistence.*;
+
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+
+@Getter
+@Entity
+@Table(name = "tags")
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+public class Tag {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(nullable = false, unique = true, length = 30)
+    private String name;
+
+    @Column(name = "usage_count", nullable = false)
+    private int usageCount;
+
+    public static Tag create(String name) {
+        Tag tag = new Tag();
+        tag.name = name;
+        return tag;
+    }
+
+    public void used() {
+        usageCount++;
+    }
+
+    public void unused() {
+        if (usageCount > 0) {
+            usageCount--;
+        }
+    }
+}

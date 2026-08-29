@@ -1,1 +1,6 @@
-package com.highpass.runspot.chat.domain; public enum ChatRoomType { GROUP, DIRECT }
+package com.highpass.runspot.chat.domain;
+
+public enum ChatRoomType {
+    GROUP,
+    DIRECT
+}
