@@ -7,6 +7,7 @@ import com.highpass.runspot.auth.domain.dao.UserRepository;
 import com.highpass.runspot.auth.domain.dao.UserRunningStatsRepository;
 import com.highpass.runspot.auth.service.UserStatsService;
 import com.highpass.runspot.auth.service.dto.response.MyCreatedRunningsResponse;
+import com.highpass.runspot.notification.service.NotificationService;
 import com.highpass.runspot.rating.domain.RatingTargetType;
 import com.highpass.runspot.rating.domain.dao.RatingRepository;
 import com.highpass.runspot.session.domain.AttendanceStatus;
@@ -47,6 +48,7 @@ public class SessionService {
     private final UserStatsService userStatsService;
     private final RatingRepository ratingRepository;
     private final ApplicationEventPublisher eventPublisher;
+    private final NotificationService notificationService;
 
     @Transactional
     public SessionResponse createSession(Long userId, SessionCreateRequest request) {
@@ -184,7 +186,8 @@ public class SessionService {
             .messageToHost(request.messageToHost())
             .build(); // status 기본값 REQUESTED, attendanceStatus 기본값 ABSENT
 
-        sessionParticipantRepository.save(participant);
+        SessionParticipant savedParticipant = sessionParticipantRepository.save(participant);
+        notificationService.notifyParticipationRequested(savedParticipant);
     }
 
     public List<SessionParticipantResponse> getJoinRequests(Long userId, Long sessionId, ParticipationStatus status) {
@@ -231,6 +234,7 @@ public class SessionService {
 
         participant.approve();
         eventPublisher.publishEvent(new ParticipantApprovedEvent(sessionId, participant.getUser().getId()));
+        notificationService.notifyParticipationApproved(participant);
     }
 
     @Transactional
@@ -248,6 +252,7 @@ public class SessionService {
 
         validateParticipationSession(sessionId, participant);
         participant.reject();
+        notificationService.notifyParticipationRejected(participant);
     }
 
     private void validateParticipationSession(Long sessionId, SessionParticipant participant) {
@@ -395,6 +400,7 @@ public class SessionService {
         }
 
         participant.kick();
+        notificationService.notifyParticipantKicked(participant);
     }
 
     private void validateGenderPolicy(GenderPolicy policy, Gender userGender) {

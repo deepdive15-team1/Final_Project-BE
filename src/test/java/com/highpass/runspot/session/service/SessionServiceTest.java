@@ -7,6 +7,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.highpass.runspot.auth.domain.User;
@@ -15,6 +16,7 @@ import com.highpass.runspot.auth.domain.dao.UserRunningStatsRepository;
 import com.highpass.runspot.auth.service.UserStatsService;
 import com.highpass.runspot.auth.service.dto.response.MyCreatedRunningsResponse;
 import com.highpass.runspot.common.util.GeometryUtil;
+import com.highpass.runspot.notification.service.NotificationService;
 import com.highpass.runspot.rating.domain.RatingTargetType;
 import com.highpass.runspot.rating.domain.dao.RatingRepository;
 import com.highpass.runspot.session.domain.AttendanceStatus;
@@ -24,6 +26,7 @@ import com.highpass.runspot.session.domain.SessionParticipant;
 import com.highpass.runspot.session.domain.SessionStatus;
 import com.highpass.runspot.session.domain.dao.SessionParticipantRepository;
 import com.highpass.runspot.session.domain.dao.SessionRepository;
+import com.highpass.runspot.session.service.dto.request.SessionJoinRequest;
 import com.highpass.runspot.session.exception.SessionErrorCode;
 import com.highpass.runspot.session.exception.SessionException;
 import java.math.BigDecimal;
@@ -55,6 +58,8 @@ class SessionServiceTest {
     private RatingRepository ratingRepository;
     @Mock
     private ApplicationEventPublisher eventPublisher;
+    @Mock
+    private NotificationService notificationService;
 
     @InjectMocks
     private SessionService sessionService;
@@ -64,7 +69,7 @@ class SessionServiceTest {
 
     @BeforeEach
     void setUp() {
-        host = User.builder().id(HOST_ID).build();
+        host = User.builder().id(HOST_ID).name("호스트").build();
     }
 
     private Session session(Long id, SessionStatus status) {
@@ -94,6 +99,7 @@ class SessionServiceTest {
         lockOrder.verify(sessionParticipantRepository).findByIdForUpdate(50L);
         lockOrder.verify(sessionParticipantRepository)
                 .countBySessionIdAndStatus(10L, ParticipationStatus.APPROVED);
+        verify(notificationService).notifyParticipationApproved(participant);
     }
 
     @Test
@@ -109,6 +115,7 @@ class SessionServiceTest {
         InOrder lockOrder = inOrder(sessionRepository, sessionParticipantRepository);
         lockOrder.verify(sessionRepository).findByIdForUpdate(10L);
         lockOrder.verify(sessionParticipantRepository).findByIdForUpdate(50L);
+        verify(notificationService).notifyParticipationRejected(participant);
     }
 
     @Test
@@ -125,6 +132,7 @@ class SessionServiceTest {
         assertThat(participant.getStatus()).isEqualTo(ParticipationStatus.REQUESTED);
         verify(sessionParticipantRepository, never())
                 .countBySessionIdAndStatus(any(), eq(ParticipationStatus.APPROVED));
+        verifyNoInteractions(notificationService);
     }
 
     @Test
@@ -139,6 +147,7 @@ class SessionServiceTest {
                 .isInstanceOf(IllegalArgumentException.class);
 
         assertThat(participant.getStatus()).isEqualTo(ParticipationStatus.REQUESTED);
+        verifyNoInteractions(notificationService);
     }
 
     @Test
@@ -155,6 +164,23 @@ class SessionServiceTest {
         sessionService.kickParticipant(HOST_ID, 10L, 50L);
 
         assertThat(participant.getStatus()).isEqualTo(ParticipationStatus.KICKED);
+        verify(notificationService).notifyParticipantKicked(participant);
+    }
+
+    @Test
+    void 참여_신청을_저장한_참여자_ID로_호스트에게_알림을_생성한다() {
+        User applicant = User.builder().id(2L).name("신청자").build();
+        Session session = session(10L, SessionStatus.OPEN);
+        SessionParticipant savedParticipant = participant(50L, session, applicant, ParticipationStatus.REQUESTED);
+        when(userRepository.findById(2L)).thenReturn(Optional.of(applicant));
+        when(sessionRepository.findById(10L)).thenReturn(Optional.of(session));
+        when(sessionParticipantRepository.existsBySessionAndUser(session, applicant)).thenReturn(false);
+        when(sessionParticipantRepository.countBySessionIdAndStatus(10L, ParticipationStatus.APPROVED)).thenReturn(0L);
+        when(sessionParticipantRepository.save(any(SessionParticipant.class))).thenReturn(savedParticipant);
+
+        sessionService.joinSession(2L, 10L, new SessionJoinRequest("참여하고 싶습니다."));
+
+        verify(notificationService).notifyParticipationRequested(savedParticipant);
     }
 
     @Test
@@ -280,10 +306,14 @@ class SessionServiceTest {
     }
 
     private SessionParticipant participant(Long id, Session session, ParticipationStatus status) {
+        return participant(id, session, User.builder().id(2L).build(), status);
+    }
+
+    private SessionParticipant participant(Long id, Session session, User user, ParticipationStatus status) {
         return SessionParticipant.builder()
                 .id(id)
                 .session(session)
-                .user(User.builder().id(2L).build())
+                .user(user)
                 .status(status)
                 .build();
     }

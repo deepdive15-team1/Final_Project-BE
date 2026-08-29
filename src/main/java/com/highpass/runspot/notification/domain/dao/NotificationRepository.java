@@ -1,8 +1,11 @@
 package com.highpass.runspot.notification.domain.dao;
 
 import com.highpass.runspot.notification.domain.Notification;
+import com.highpass.runspot.notification.domain.NotificationActionStatus;
+import com.highpass.runspot.notification.domain.NotificationType;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -22,6 +25,13 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
     );
 
     long countByRecipientUserIdAndReadAtIsNull(Long recipientUserId);
+
+    Optional<Notification> findByTypeAndParticipationIdAndRecipientUserIdAndActionStatus(
+            NotificationType type,
+            Long participationId,
+            Long recipientUserId,
+            NotificationActionStatus actionStatus
+    );
 
     @Modifying(clearAutomatically = true)
     @Query("""
