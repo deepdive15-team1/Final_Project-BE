@@ -23,6 +23,7 @@ import org.locationtech.jts.geom.Point;
 import org.locationtech.jts.geom.PrecisionModel;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
+import org.springframework.context.annotation.Profile;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
@@ -33,6 +34,7 @@ import java.util.Random;
 
 @Slf4j
 @Component
+@Profile("local")
 @RequiredArgsConstructor
 public class DataInitializer implements CommandLineRunner {
 
