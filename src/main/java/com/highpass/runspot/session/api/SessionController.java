@@ -6,6 +6,7 @@ import com.highpass.runspot.session.service.SessionQueryService;
 import com.highpass.runspot.session.service.SessionService;
 import com.highpass.runspot.session.service.dto.request.AttendanceUpdateRequest;
 import com.highpass.runspot.session.service.dto.request.PositionBasedSearchCondition;
+import com.highpass.runspot.session.service.dto.request.ParticipantActionRequest;
 import com.highpass.runspot.session.service.dto.request.RangeBasedMarkerSearchCondition;
 import com.highpass.runspot.session.service.dto.request.SessionCreateRequest;
 import com.highpass.runspot.session.service.dto.request.SessionJoinRequest;
@@ -41,7 +42,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @Tag(name = "Session", description = "러닝 세션 관리 API")
 @RestController
-@RequestMapping("/sessions")
+@RequestMapping({"/sessions", "/api/v1/sessions"})
 @RequiredArgsConstructor
 public class SessionController {
 
@@ -187,6 +188,46 @@ public class SessionController {
         List<SessionParticipantResponse> responses = sessionService.getJoinRequests(principal.getId(), sessionId, status);
 
         return ResponseEntity.ok(responses);
+    }
+
+    @Operation(summary = "세션 참여자 조회", description = "호스트가 신청 대기 및 확정 참여자를 상태별로 조회합니다.")
+    @ApiResponse(responseCode = "200", description = "조회 성공")
+    @GetMapping("/{sessionId}/participants")
+    public ResponseEntity<List<SessionParticipantResponse>> getParticipants(
+            @PathVariable Long sessionId,
+            @RequestParam(required = false) ParticipationStatus status,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        if (principal == null) throw new IllegalStateException("로그인이 필요합니다.");
+        return ResponseEntity.ok(sessionService.getJoinRequests(principal.getId(), sessionId, status));
+    }
+
+    @Operation(summary = "참여 신청 승인 또는 거절", description = "action 값 APPROVE 또는 REJECT로 참여 신청을 처리합니다.")
+    @ApiResponse(responseCode = "200", description = "처리 성공")
+    @ApiResponse(responseCode = "409", description = "세션 정원 초과")
+    @PatchMapping("/{sessionId}/participants/{participationId}")
+    public ResponseEntity<Void> updateParticipant(
+            @PathVariable Long sessionId,
+            @PathVariable Long participationId,
+            @Valid @RequestBody ParticipantActionRequest request,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        if (principal == null) throw new IllegalStateException("로그인이 필요합니다.");
+        if (request.action() == ParticipantActionRequest.Action.APPROVE) {
+            sessionService.approveJoinRequest(principal.getId(), sessionId, participationId);
+        } else {
+            sessionService.rejectJoinRequest(principal.getId(), sessionId, participationId);
+        }
+        return ResponseEntity.ok().build();
+    }
+
+    @Operation(summary = "출석 체크 시작", description = "호스트가 세션을 IN_PROGRESS 상태로 전환합니다.")
+    @ApiResponse(responseCode = "200", description = "시작 성공")
+    @PostMapping("/{sessionId}/attendance/start")
+    public ResponseEntity<Void> startAttendance(
+            @PathVariable Long sessionId,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        if (principal == null) throw new IllegalStateException("로그인이 필요합니다.");
+        sessionService.startSession(principal.getId(), sessionId);
+        return ResponseEntity.ok().build();
     }
 
     @PostMapping("/{sessionId}/join-requests/{participationId}/approve")

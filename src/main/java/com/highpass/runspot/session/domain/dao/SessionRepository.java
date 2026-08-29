@@ -11,8 +11,14 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.data.jpa.repository.Lock;
+import jakarta.persistence.LockModeType;
+import java.util.Optional;
 
 public interface SessionRepository extends JpaRepository<Session, Long> {
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT s FROM Session s WHERE s.id = :id")
+    Optional<Session> findByIdForUpdate(@Param("id") Long id);
     @Modifying
     @Query("DELETE FROM Session s WHERE s.hostUser.id = :userId")
     void deleteByHostUserId(@Param("userId") Long userId);

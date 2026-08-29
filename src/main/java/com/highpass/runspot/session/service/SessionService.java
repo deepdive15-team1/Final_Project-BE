@@ -210,7 +210,7 @@ public class SessionService {
 
     @Transactional
     public void approveJoinRequest(Long userId, Long sessionId, Long participationId) {
-        Session session = sessionRepository.findById(sessionId)
+        Session session = sessionRepository.findByIdForUpdate(sessionId)
             .orElseThrow(() -> new IllegalArgumentException("세션을 찾을 수 없습니다. ID: " + sessionId));
 
         // 호스트 검증
@@ -221,10 +221,14 @@ public class SessionService {
         SessionParticipant participant = sessionParticipantRepository.findById(participationId)
             .orElseThrow(() -> new IllegalArgumentException("신청 정보를 찾을 수 없습니다."));
 
+        if (!participant.getSession().getId().equals(sessionId)) {
+            throw new SessionException(SessionErrorCode.PARTICIPANT_SESSION_MISMATCH);
+        }
+
         // 인원 마감 체크 (승인 시점에 다시 한번 체크)
         long approvedCount = sessionParticipantRepository.countBySessionIdAndStatus(sessionId, ParticipationStatus.APPROVED);
         if (approvedCount >= session.getCapacity()) {
-            throw new IllegalStateException("모집 인원이 마감되어 승인할 수 없습니다.");
+            throw new SessionException(SessionErrorCode.SESSION_CAPACITY_EXCEEDED);
         }
 
         participant.approve();
@@ -243,6 +247,10 @@ public class SessionService {
 
         SessionParticipant participant = sessionParticipantRepository.findById(participationId)
             .orElseThrow(() -> new IllegalArgumentException("신청 정보를 찾을 수 없습니다."));
+
+        if (!participant.getSession().getId().equals(sessionId)) {
+            throw new SessionException(SessionErrorCode.PARTICIPANT_SESSION_MISMATCH);
+        }
 
         participant.reject();
     }
