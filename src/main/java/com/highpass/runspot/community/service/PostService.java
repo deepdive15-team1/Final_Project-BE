@@ -15,6 +15,7 @@ import com.highpass.runspot.community.exception.CommunityException;
 import com.highpass.runspot.community.repository.PostRepository;
 import com.highpass.runspot.community.repository.PostLikeRepository;
 import com.highpass.runspot.community.repository.PostScrapRepository;
+import com.highpass.runspot.course.repository.RunningRecordRepository;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -34,6 +35,7 @@ public class PostService {
     private final UserRepository userRepository;
     private final PostLikeRepository postLikeRepository;
     private final PostScrapRepository postScrapRepository;
+    private final RunningRecordRepository runningRecordRepository;
 
     public PostListResponse getPosts(BoardType boardType, PostSort sort, String query, String cursor, int size) {
         int pageSize = Math.min(Math.max(size, 1), MAX_PAGE_SIZE);
@@ -59,6 +61,7 @@ public class PostService {
 
     @Transactional
     public PostDetailResponse createPost(Long userId, PostUpsertRequest request) {
+        validateRunningRecordOwner(userId, request);
         User author = userRepository.findById(userId)
                 .orElseThrow(() -> new CommunityException(CommunityErrorCode.USER_NOT_FOUND));
         Post post = Post.create(author, request.boardType(), request.title(), request.content(),
@@ -70,6 +73,7 @@ public class PostService {
     public PostDetailResponse updatePost(Long userId, Long postId, PostUpsertRequest request) {
         Post post = findActivePost(postId);
         post.validateOwner(userId);
+        validateRunningRecordOwner(userId, request);
         post.update(request.boardType(), request.title(), request.content(), request.runningRecordId(),
                 request.status(), request.imageKeys());
         return PostDetailResponse.from(post, userId,
@@ -116,6 +120,16 @@ public class PostService {
     private Post findPublishedPost(Long postId) {
         return postRepository.findDetailByIdAndStatus(postId, PostStatus.PUBLISHED)
                 .orElseThrow(() -> new CommunityException(CommunityErrorCode.POST_NOT_FOUND));
+    }
+
+    private void validateRunningRecordOwner(Long userId, PostUpsertRequest request) {
+        if (request.boardType() == BoardType.COURSE && request.runningRecordId() == null) {
+            throw new CommunityException(CommunityErrorCode.INVALID_COURSE_POST);
+        }
+        if (request.boardType() == BoardType.COURSE
+                && !runningRecordRepository.existsByIdAndUserId(request.runningRecordId(), userId)) {
+            throw new CommunityException(CommunityErrorCode.NOT_RUNNING_RECORD_OWNER);
+        }
     }
 
     private Post findActivePost(Long postId) {
