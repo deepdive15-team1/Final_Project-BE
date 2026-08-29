@@ -37,6 +37,7 @@ public class SecurityConfig {
                         .requestMatchers("/auth/signup", "/auth/login", "/auth/refresh", "/auth/logout").permitAll()
                         .requestMatchers(HttpMethod.DELETE, "/auth/withdraw").authenticated()
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
+                        .requestMatchers("/ws-stomp/**").permitAll()
                         .requestMatchers(HttpMethod.GET,
                                 "/sessions/search",
                                 "/sessions/search/nearby",
