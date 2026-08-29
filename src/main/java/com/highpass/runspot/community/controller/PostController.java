@@ -8,6 +8,9 @@ import com.highpass.runspot.community.dto.PostListResponse;
 import com.highpass.runspot.community.dto.PostUpsertRequest;
 import com.highpass.runspot.community.service.PostService;
 import jakarta.validation.Valid;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import java.net.URI;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -25,11 +28,14 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/v1/posts")
 @RequiredArgsConstructor
+@Tag(name = "Community Post", description = "커뮤니티 게시글 API")
 public class PostController {
 
     private final PostService postService;
 
     @GetMapping
+    @Operation(summary = "게시글 목록 조회", description = "게시판 유형·정렬·검색 조건으로 게시글을 커서 기반 조회합니다.")
+    @ApiResponse(responseCode = "200", description = "조회 성공")
     public ResponseEntity<PostListResponse> getPosts(
             @RequestParam(required = false) BoardType boardType,
             @RequestParam(defaultValue = "LATEST") PostSort sort,
@@ -40,6 +46,9 @@ public class PostController {
     }
 
     @GetMapping("/{postId}")
+    @Operation(summary = "게시글 상세 조회", description = "게시글 상세와 로그인 사용자의 좋아요·스크랩 상태를 조회합니다.")
+    @ApiResponse(responseCode = "200", description = "조회 성공")
+    @ApiResponse(responseCode = "404", description = "게시글 없음")
     public ResponseEntity<PostDetailResponse> getPost(
             @PathVariable Long postId,
             @AuthenticationPrincipal UserPrincipal principal) {
@@ -47,6 +56,8 @@ public class PostController {
     }
 
     @PostMapping
+    @Operation(summary = "게시글 작성", description = "일반 또는 러닝 코스 게시글을 작성하거나 임시 저장합니다.")
+    @ApiResponse(responseCode = "201", description = "작성 성공")
     public ResponseEntity<PostDetailResponse> createPost(
             @Valid @RequestBody PostUpsertRequest request,
             @AuthenticationPrincipal UserPrincipal principal) {
@@ -56,6 +67,9 @@ public class PostController {
     }
 
     @PatchMapping("/{postId}")
+    @Operation(summary = "게시글 수정", description = "작성자가 게시글 내용과 이미지를 수정합니다.")
+    @ApiResponse(responseCode = "200", description = "수정 성공")
+    @ApiResponse(responseCode = "403", description = "작성자 권한 없음")
     public ResponseEntity<PostDetailResponse> updatePost(
             @PathVariable Long postId,
             @Valid @RequestBody PostUpsertRequest request,
@@ -65,6 +79,8 @@ public class PostController {
     }
 
     @DeleteMapping("/{postId}")
+    @Operation(summary = "게시글 삭제", description = "작성자가 게시글을 소프트 삭제합니다.")
+    @ApiResponse(responseCode = "204", description = "삭제 성공")
     public ResponseEntity<Void> deletePost(
             @PathVariable Long postId,
             @AuthenticationPrincipal UserPrincipal principal) {
