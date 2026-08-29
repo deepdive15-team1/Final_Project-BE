@@ -1,0 +1,8 @@
+package com.highpass.runspot.chat.service;
+import static org.assertj.core.api.Assertions.assertThat;import static org.mockito.Mockito.*;
+import com.highpass.runspot.chat.domain.*;import com.highpass.runspot.chat.repository.*;import java.util.Optional;import org.junit.jupiter.api.Test;import org.junit.jupiter.api.extension.ExtendWith;import org.mockito.*;import org.mockito.junit.jupiter.MockitoExtension;import org.springframework.data.redis.core.*;
+@ExtendWith(MockitoExtension.class)class ChatReadServiceTest{
+ @Mock ChatRoomMemberRepository members;@Mock ChatMessageRepository messages;@Mock StringRedisTemplate redis;@Mock HashOperations<String,Object,Object> hash;@InjectMocks ChatReadService service;
+ @Test void redis에_값이_있으면_DB_count없이_안읽은수를_반환한다(){ChatRoom room=mock(ChatRoom.class);ChatRoomMember member=mock(ChatRoomMember.class);when(member.getRoom()).thenReturn(room);when(room.getId()).thenReturn(10L);when(redis.opsForHash()).thenReturn(hash);when(hash.get("chat:unread:2","10")).thenReturn("3");assertThat(service.unread(2L,member)).isEqualTo(3);verifyNoInteractions(messages);}
+ @Test void redis_미스면_마지막_읽음커서로_DB에서_복구한다(){ChatRoom room=mock(ChatRoom.class);ChatRoomMember member=mock(ChatRoomMember.class);when(member.getRoom()).thenReturn(room);when(member.getLastReadMessageId()).thenReturn(7L);when(room.getId()).thenReturn(10L);when(redis.opsForHash()).thenReturn(hash);when(hash.get("chat:unread:2","10")).thenReturn(null);when(messages.countByRoomIdAndIdGreaterThan(10L,7L)).thenReturn(4L);assertThat(service.unread(2L,member)).isEqualTo(4);verify(hash).put("chat:unread:2","10","4");}
+}
