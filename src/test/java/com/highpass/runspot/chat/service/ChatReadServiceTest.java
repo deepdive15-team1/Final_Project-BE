@@ -1,0 +1,71 @@
+package com.highpass.runspot.chat.service;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.*;
+
+import com.highpass.runspot.chat.domain.*;
+import com.highpass.runspot.chat.repository.*;
+
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.*;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.redis.core.*;
+
+import java.util.*;
+
+@ExtendWith(MockitoExtension.class)
+class ChatReadServiceTest {
+    @Mock ChatRoomMemberRepository members;
+    @Mock ChatMessageRepository messages;
+    @Mock StringRedisTemplate redis;
+    @Mock HashOperations<String, Object, Object> hash;
+    @InjectMocks ChatReadService service;
+
+    @Test
+    void redis에_값이_있으면_DB_count없이_안읽은수를_반환한다() {
+        ChatRoom room = mock(ChatRoom.class);
+        ChatRoomMember member = mock(ChatRoomMember.class);
+        when(member.getRoom()).thenReturn(room);
+        when(room.getId()).thenReturn(10L);
+        when(redis.opsForHash()).thenReturn(hash);
+        when(hash.get("chat:unread:2", "10")).thenReturn("3");
+        assertThat(service.unread(2L, member)).isEqualTo(3);
+        verifyNoInteractions(messages);
+    }
+
+    @Test
+    void redis_미스면_마지막_읽음커서로_DB에서_복구한다() {
+        ChatRoom room = mock(ChatRoom.class);
+        ChatRoomMember member = mock(ChatRoomMember.class);
+        when(member.getRoom()).thenReturn(room);
+        when(member.getLastReadMessageId()).thenReturn(7L);
+        when(room.getId()).thenReturn(10L);
+        when(redis.opsForHash()).thenReturn(hash);
+        when(hash.get("chat:unread:2", "10")).thenReturn(null);
+        when(messages.countByRoomIdAndIdGreaterThan(10L, 7L)).thenReturn(4L);
+        assertThat(service.unread(2L, member)).isEqualTo(4);
+        verify(hash).put("chat:unread:2", "10", "4");
+    }
+
+    @Test
+    void 방목록은_HGETALL_한번으로_캐시를_조회하고_미스만_DB복구한다() {
+        ChatRoom cachedRoom = mock(ChatRoom.class);
+        ChatRoom missedRoom = mock(ChatRoom.class);
+        ChatRoomMember cachedMember = mock(ChatRoomMember.class);
+        ChatRoomMember missedMember = mock(ChatRoomMember.class);
+        when(cachedMember.getRoom()).thenReturn(cachedRoom);
+        when(missedMember.getRoom()).thenReturn(missedRoom);
+        when(cachedRoom.getId()).thenReturn(10L);
+        when(missedRoom.getId()).thenReturn(20L);
+        when(missedMember.getLastReadMessageId()).thenReturn(5L);
+        when(redis.opsForHash()).thenReturn(hash);
+        when(hash.entries("chat:unread:2")).thenReturn(Map.of("10", "3"));
+        when(messages.countByRoomIdAndIdGreaterThan(20L, 5L)).thenReturn(2L);
+        Map<Long, Long> result = service.unreadByRoom(2L, List.of(cachedMember, missedMember));
+        assertThat(result).containsEntry(10L, 3L).containsEntry(20L, 2L);
+        verify(hash).entries("chat:unread:2");
+        verify(hash).putAll("chat:unread:2", Map.of("20", "2"));
+        verify(messages, never()).countByRoomId(10L);
+    }
+}

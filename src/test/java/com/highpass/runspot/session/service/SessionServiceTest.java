@@ -32,6 +32,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 
 @ExtendWith(MockitoExtension.class)
 class SessionServiceTest {
@@ -48,6 +49,8 @@ class SessionServiceTest {
     private UserStatsService userStatsService;
     @Mock
     private RatingRepository ratingRepository;
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
 
     @InjectMocks
     private SessionService sessionService;
@@ -177,5 +180,34 @@ class SessionServiceTest {
                 .status(ParticipationStatus.APPROVED)
                 .attendanceStatus(AttendanceStatus.ATTENDED)
                 .build();
+    }
+
+    @Test
+    void 다른_세션의_참여신청은_승인할_수_없다() {
+        Session target = session(10L, SessionStatus.OPEN);
+        Session other = session(20L, SessionStatus.OPEN);
+        SessionParticipant participant = SessionParticipant.builder()
+                .id(100L).session(other).user(User.builder().id(2L).build()).build();
+        when(sessionRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(target));
+        when(sessionParticipantRepository.findById(100L)).thenReturn(Optional.of(participant));
+
+        assertThatThrownBy(() -> sessionService.approveJoinRequest(HOST_ID, 10L, 100L))
+                .isInstanceOf(SessionException.class)
+                .hasFieldOrPropertyWithValue("exceptionType", SessionErrorCode.PARTICIPANT_SESSION_MISMATCH);
+    }
+
+    @Test
+    void 승인된_인원이_정원에_도달하면_추가_승인을_거부한다() {
+        Session target = Session.builder().id(10L).hostUser(host).status(SessionStatus.OPEN).capacity(1).build();
+        SessionParticipant participant = SessionParticipant.builder()
+                .id(100L).session(target).user(User.builder().id(2L).build()).build();
+        when(sessionRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(target));
+        when(sessionParticipantRepository.findById(100L)).thenReturn(Optional.of(participant));
+        when(sessionParticipantRepository.countBySessionIdAndStatus(10L, ParticipationStatus.APPROVED))
+                .thenReturn(1L);
+
+        assertThatThrownBy(() -> sessionService.approveJoinRequest(HOST_ID, 10L, 100L))
+                .isInstanceOf(SessionException.class)
+                .hasFieldOrPropertyWithValue("exceptionType", SessionErrorCode.SESSION_CAPACITY_EXCEEDED);
     }
 }

@@ -1,0 +1,29 @@
+package com.highpass.runspot.chat.outbox;
+
+import com.highpass.runspot.common.domain.BaseTimeEntity;
+
+import jakarta.persistence.*;
+
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
+
+@Entity
+@Table(
+        name = "chat_inbox",
+        uniqueConstraints =
+                @UniqueConstraint(name = "uk_chat_inbox_event", columnNames = "event_id"))
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+public class ChatInbox extends BaseTimeEntity {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(name = "event_id", nullable = false)
+    private Long eventId;
+
+    public static ChatInbox received(Long eventId) {
+        ChatInbox inbox = new ChatInbox();
+        inbox.eventId = eventId;
+        return inbox;
+    }
+}

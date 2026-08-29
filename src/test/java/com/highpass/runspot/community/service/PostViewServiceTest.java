@@ -1,0 +1,53 @@
+package com.highpass.runspot.community.service;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
+
+import com.highpass.runspot.auth.domain.User;
+import com.highpass.runspot.community.domain.*;
+
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.*;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.redis.core.*;
+
+import java.time.Duration;
+import java.util.List;
+
+@ExtendWith(MockitoExtension.class)
+class PostViewServiceTest {
+    @Mock StringRedisTemplate redis;
+    @Mock ValueOperations<String, String> values;
+    @InjectMocks PostViewService service;
+
+    private Post post() {
+        return Post.create(
+                User.builder().id(1L).build(),
+                BoardType.GENERAL,
+                "제목",
+                "내용",
+                null,
+                PostStatus.PUBLISHED,
+                List.of());
+    }
+
+    @Test
+    void 로그인_사용자의_첫조회만_카운트한다() {
+        Post post = post();
+        when(redis.opsForValue()).thenReturn(values);
+        when(values.setIfAbsent(anyString(), eq("1"), any(Duration.class))).thenReturn(true, false);
+        service.increase(post, 2L);
+        service.increase(post, 2L);
+        assertThat(post.getViewCount()).isEqualTo(1);
+    }
+
+    @Test
+    void 비로그인_조회는_매번_카운트한다() {
+        Post post = post();
+        service.increase(post, null);
+        service.increase(post, null);
+        assertThat(post.getViewCount()).isEqualTo(2);
+    }
+}
