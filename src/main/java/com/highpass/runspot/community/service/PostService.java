@@ -16,6 +16,7 @@ import com.highpass.runspot.community.repository.PostRepository;
 import com.highpass.runspot.community.repository.PostLikeRepository;
 import com.highpass.runspot.community.repository.PostScrapRepository;
 import com.highpass.runspot.course.repository.RunningRecordRepository;
+import com.highpass.runspot.file.service.S3PresignService;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -36,6 +37,7 @@ public class PostService {
     private final PostLikeRepository postLikeRepository;
     private final PostScrapRepository postScrapRepository;
     private final RunningRecordRepository runningRecordRepository;
+    private final S3PresignService s3PresignService;
 
     public PostListResponse getPosts(BoardType boardType, PostSort sort, String query, String cursor, int size) {
         int pageSize = Math.min(Math.max(size, 1), MAX_PAGE_SIZE);
@@ -66,7 +68,9 @@ public class PostService {
                 .orElseThrow(() -> new CommunityException(CommunityErrorCode.USER_NOT_FOUND));
         Post post = Post.create(author, request.boardType(), request.title(), request.content(),
                 request.runningRecordId(), request.status(), request.imageKeys());
-        return PostDetailResponse.from(postRepository.save(post), userId, false, false);
+        Post saved = postRepository.save(post);
+        s3PresignService.link(userId, request.imageKeys());
+        return PostDetailResponse.from(saved, userId, false, false);
     }
 
     @Transactional
@@ -76,6 +80,7 @@ public class PostService {
         validateRunningRecordOwner(userId, request);
         post.update(request.boardType(), request.title(), request.content(), request.runningRecordId(),
                 request.status(), request.imageKeys());
+        s3PresignService.link(userId, request.imageKeys());
         return PostDetailResponse.from(post, userId,
                 postLikeRepository.existsByPostIdAndUserId(postId, userId),
                 postScrapRepository.existsByPostIdAndUserId(postId, userId));

@@ -24,6 +24,12 @@ jwt:
   access-token-expiration: 1800000    # 30분 (ms)
   refresh-token-expiration: 1209600000 # 14일 (ms)
 
+aws:
+  region: ${AWS_REGION:ap-northeast-2}
+  s3:
+    bucket: ${AWS_S3_BUCKET:runspot-bucket}
+    public-base-url: ${AWS_S3_PUBLIC_BASE_URL:https://runspot-bucket.s3.ap-northeast-2.amazonaws.com}
+
 sentry:
   dsn: ${SENTRY_DSN}
   environment: ${SENTRY_ENVIRONMENT:local}

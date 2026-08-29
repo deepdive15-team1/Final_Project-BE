@@ -55,6 +55,10 @@ dependencies {
 
 	// Sentry (에러 모니터링)
 	implementation 'io.sentry:sentry-spring-boot-4:8.43.1'
+
+	// S3 Presigned URL
+	implementation platform('software.amazon.awssdk:bom:2.32.26')
+	implementation 'software.amazon.awssdk:s3'
 }
 
 tasks.named('test') {
