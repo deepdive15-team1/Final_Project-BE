@@ -13,9 +13,11 @@ public record PostUpsertRequest(
         @NotBlank String content,
         Long runningRecordId,
         @Size(max = 3) List<@NotBlank @Size(max = 500) String> imageKeys,
+        @Size(max = 10) List<@NotBlank @Size(max = 30) String> tags,
         @NotNull PostStatus status
 ) {
     public PostUpsertRequest {
         imageKeys = imageKeys == null ? List.of() : List.copyOf(imageKeys);
+        tags = tags == null ? List.of() : List.copyOf(tags);
     }
 }

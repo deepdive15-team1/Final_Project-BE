@@ -73,6 +73,10 @@ public class Post extends BaseTimeEntity {
     @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<PostImage> images = new ArrayList<>();
 
+    @BatchSize(size = 50)
+    @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<PostTag> postTags = new ArrayList<>();
+
     public static Post create(User author, BoardType boardType, String title, String content,
                               Long runningRecordId, PostStatus status, List<String> imageKeys) {
         Post post = new Post();
@@ -117,6 +121,12 @@ public class Post extends BaseTimeEntity {
     public void increaseCommentCount() { this.commentCount++; }
 
     public void decreaseCommentCount() { if (this.commentCount > 0) this.commentCount--; }
+
+    public void replaceTags(List<Tag> tags) {
+        postTags.forEach(postTag -> postTag.getTag().unused());
+        postTags.clear();
+        tags.forEach(tag -> { tag.used(); postTags.add(PostTag.create(this, tag)); });
+    }
 
     private static void validateCourse(BoardType boardType, Long runningRecordId) {
         if (boardType == BoardType.COURSE && runningRecordId == null) {

@@ -1,0 +1,2 @@
+package com.highpass.runspot.community.service;import com.highpass.runspot.community.domain.Tag;import com.highpass.runspot.community.repository.TagRepository;import lombok.RequiredArgsConstructor;import org.springframework.stereotype.Component;import org.springframework.transaction.annotation.*;
+@Component @RequiredArgsConstructor public class TagCreator{private final TagRepository tags;@Transactional(propagation=Propagation.REQUIRES_NEW)public Tag create(String name){return tags.saveAndFlush(Tag.create(name));}}

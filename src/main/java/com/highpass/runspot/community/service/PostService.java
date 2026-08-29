@@ -16,6 +16,7 @@ import com.highpass.runspot.community.repository.PostRepository;
 import com.highpass.runspot.community.repository.PostLikeRepository;
 import com.highpass.runspot.community.repository.PostScrapRepository;
 import com.highpass.runspot.course.repository.RunningRecordRepository;
+import com.highpass.runspot.course.repository.CourseScrapRepository;
 import com.highpass.runspot.file.service.S3PresignService;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -38,6 +39,9 @@ public class PostService {
     private final PostScrapRepository postScrapRepository;
     private final RunningRecordRepository runningRecordRepository;
     private final S3PresignService s3PresignService;
+    private final CourseScrapRepository courseScrapRepository;
+    private final TagService tagService;
+    private final PostViewService postViewService;
 
     public PostListResponse getPosts(BoardType boardType, PostSort sort, String query, String cursor, int size) {
         int pageSize = Math.min(Math.max(size, 1), MAX_PAGE_SIZE);
@@ -55,10 +59,12 @@ public class PostService {
     @Transactional
     public PostDetailResponse getPost(Long postId, Long viewerId) {
         Post post = findPublishedPost(postId);
-        post.increaseViewCount();
+        postViewService.increase(post, viewerId);
         boolean liked = viewerId != null && postLikeRepository.existsByPostIdAndUserId(postId, viewerId);
         boolean scrapped = viewerId != null && postScrapRepository.existsByPostIdAndUserId(postId, viewerId);
-        return PostDetailResponse.from(post, viewerId, liked, scrapped);
+        boolean courseScrapped = viewerId != null && post.getRunningRecordId() != null
+                && courseScrapRepository.existsByRunningRecordIdAndUserId(post.getRunningRecordId(), viewerId);
+        return PostDetailResponse.from(post, viewerId, liked, scrapped, courseScrapped);
     }
 
     @Transactional
@@ -69,8 +75,9 @@ public class PostService {
         Post post = Post.create(author, request.boardType(), request.title(), request.content(),
                 request.runningRecordId(), request.status(), request.imageKeys());
         Post saved = postRepository.save(post);
+        saved.replaceTags(tagService.resolve(request.tags()));
         s3PresignService.link(userId, request.imageKeys());
-        return PostDetailResponse.from(saved, userId, false, false);
+        return PostDetailResponse.from(saved, userId, false, false, false);
     }
 
     @Transactional
@@ -80,10 +87,24 @@ public class PostService {
         validateRunningRecordOwner(userId, request);
         post.update(request.boardType(), request.title(), request.content(), request.runningRecordId(),
                 request.status(), request.imageKeys());
+        post.replaceTags(tagService.resolve(request.tags()));
         s3PresignService.link(userId, request.imageKeys());
         return PostDetailResponse.from(post, userId,
                 postLikeRepository.existsByPostIdAndUserId(postId, userId),
-                postScrapRepository.existsByPostIdAndUserId(postId, userId));
+                postScrapRepository.existsByPostIdAndUserId(postId, userId),
+                post.getRunningRecordId() != null && courseScrapRepository.existsByRunningRecordIdAndUserId(post.getRunningRecordId(), userId));
+    }
+
+    public List<PostDetailResponse> getDrafts(Long userId) {
+        return postRepository.findByAuthorIdAndStatusOrderByUpdatedAtDesc(userId, PostStatus.DRAFT).stream()
+                .map(post -> PostDetailResponse.from(post, userId, false, false, false)).toList();
+    }
+
+    @Transactional
+    public PostDetailResponse createDraft(Long userId, PostUpsertRequest request) {
+        PostUpsertRequest draft = new PostUpsertRequest(request.boardType(), request.title(), request.content(),
+                request.runningRecordId(), request.imageKeys(), request.tags(), PostStatus.DRAFT);
+        return createPost(userId, draft);
     }
 
     @Transactional

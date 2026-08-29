@@ -10,8 +10,11 @@ import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import java.util.List;
 
 public interface PostRepository extends JpaRepository<Post, Long> {
+    @EntityGraph(attributePaths = {"author", "images", "postTags", "postTags.tag"})
+    List<Post> findByAuthorIdAndStatusOrderByUpdatedAtDesc(Long authorId, PostStatus status);
 
     @EntityGraph(attributePaths = {"author", "images"})
     @Query("select distinct p from Post p where p.id = :id and p.status = :status")

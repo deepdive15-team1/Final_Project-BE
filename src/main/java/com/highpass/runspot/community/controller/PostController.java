@@ -12,6 +12,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.net.URI;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -32,6 +33,25 @@ import org.springframework.web.bind.annotation.RestController;
 public class PostController {
 
     private final PostService postService;
+
+    @GetMapping("/drafts")
+    @Operation(summary = "임시저장 게시글 목록", description = "로그인 사용자의 임시저장 글을 최근 수정순으로 조회합니다.")
+    @ApiResponse(responseCode = "200", description = "조회 성공")
+    public ResponseEntity<List<PostDetailResponse>> getDrafts(@AuthenticationPrincipal UserPrincipal principal) {
+        requireLogin(principal);
+        return ResponseEntity.ok(postService.getDrafts(principal.getId()));
+    }
+
+    @PostMapping("/drafts")
+    @Operation(summary = "게시글 임시저장", description = "요청 status와 관계없이 DRAFT 상태로 저장합니다.")
+    @ApiResponse(responseCode = "201", description = "임시저장 성공")
+    public ResponseEntity<PostDetailResponse> createDraft(
+            @Valid @RequestBody PostUpsertRequest request,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        requireLogin(principal);
+        PostDetailResponse response = postService.createDraft(principal.getId(), request);
+        return ResponseEntity.created(URI.create("/api/v1/posts/" + response.postId())).body(response);
+    }
 
     @GetMapping
     @Operation(summary = "게시글 목록 조회", description = "게시판 유형·정렬·검색 조건으로 게시글을 커서 기반 조회합니다.")
