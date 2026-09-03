@@ -28,3 +28,7 @@ sentry:
 notification:
   reminder:
     enabled: false
+
+push:
+  fcm:
+    enabled: false

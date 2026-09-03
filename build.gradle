@@ -40,6 +40,7 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-web'
 	implementation 'org.springframework.boot:spring-boot-starter-websocket'
 	implementation 'org.springframework.boot:spring-boot-starter-amqp'
+	implementation 'org.springframework.boot:spring-boot-starter-validation'
 	implementation "org.springframework.boot:spring-boot-jackson2"
 
 	implementation 'org.springframework.boot:spring-boot-starter-security' // Spring Security
@@ -65,8 +66,13 @@ dependencies {
 	// S3 Presigned URL
 	implementation platform('software.amazon.awssdk:bom:2.32.26')
 	implementation 'software.amazon.awssdk:s3'
+
+	// Firebase Admin
+	implementation 'com.google.firebase:firebase-admin:9.10.0'
+	testImplementation 'com.github.stefanbirkner:system-lambda:1.2.1'
 }
 
 tasks.named('test') {
 	useJUnitPlatform()
+	jvmArgs '--add-opens=java.base/java.util=ALL-UNNAMED'
 }
