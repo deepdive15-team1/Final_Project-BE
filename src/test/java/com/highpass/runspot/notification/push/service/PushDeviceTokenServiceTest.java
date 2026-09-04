@@ -27,11 +27,9 @@ import org.springframework.dao.DataAccessException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.TestPropertySource;
 
 @ActiveProfiles("test")
 @SpringBootTest
-@TestPropertySource(properties = "spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver")
 class PushDeviceTokenServiceTest extends MySqlContainerSupport {
 
     private static final long FIRST_USER_ID = 1001L;

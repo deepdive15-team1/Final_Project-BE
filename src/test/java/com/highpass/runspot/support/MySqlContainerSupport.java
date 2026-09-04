@@ -21,6 +21,7 @@ public abstract class MySqlContainerSupport {
     @DynamicPropertySource
     static void registerMySqlProperties(DynamicPropertyRegistry registry) {
         registry.add("spring.datasource.url", MYSQL::getJdbcUrl);
+        registry.add("spring.datasource.driver-class-name", () -> "com.mysql.cj.jdbc.Driver");
         registry.add("spring.datasource.username", MYSQL::getUsername);
         registry.add("spring.datasource.password", MYSQL::getPassword);
         registry.add("spring.jpa.hibernate.ddl-auto", () -> "create-drop");

@@ -24,6 +24,8 @@ class MySqlContainerSupportTest extends MySqlContainerSupport {
         try (Connection connection = dataSource.getConnection();
                 Statement statement = connection.createStatement();
                 ResultSet resultSet = statement.executeQuery("SELECT 1")) {
+            assertThat(connection.getMetaData().getURL()).startsWith("jdbc:mysql:");
+            assertThat(connection.getMetaData().getDriverName()).contains("MySQL");
             assertThat(resultSet.next()).isTrue();
             assertThat(resultSet.getInt(1)).isEqualTo(1);
         }
