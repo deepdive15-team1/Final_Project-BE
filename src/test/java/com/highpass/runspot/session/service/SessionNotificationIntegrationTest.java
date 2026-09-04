@@ -7,6 +7,13 @@ import com.highpass.runspot.auth.domain.AgeGroup;
 import com.highpass.runspot.auth.domain.Gender;
 import com.highpass.runspot.auth.domain.User;
 import com.highpass.runspot.auth.domain.dao.UserRepository;
+import com.highpass.runspot.chat.domain.ChatMemberRole;
+import com.highpass.runspot.chat.domain.ChatRoom;
+import com.highpass.runspot.chat.domain.ChatRoomMember;
+import com.highpass.runspot.chat.outbox.ChatOutboxRepository;
+import com.highpass.runspot.chat.repository.ChatMessageRepository;
+import com.highpass.runspot.chat.repository.ChatRoomMemberRepository;
+import com.highpass.runspot.chat.repository.ChatRoomRepository;
 import com.highpass.runspot.common.util.GeometryUtil;
 import com.highpass.runspot.notification.domain.Notification;
 import com.highpass.runspot.notification.domain.NotificationActionStatus;
@@ -55,6 +62,14 @@ class SessionNotificationIntegrationTest extends MySqlContainerSupport {
     @Autowired
     private NotificationRepository notificationRepository;
     @Autowired
+    private ChatRoomRepository chatRoomRepository;
+    @Autowired
+    private ChatRoomMemberRepository chatRoomMemberRepository;
+    @Autowired
+    private ChatMessageRepository chatMessageRepository;
+    @Autowired
+    private ChatOutboxRepository chatOutboxRepository;
+    @Autowired
     private JdbcTemplate jdbcTemplate;
     @PersistenceContext
     private EntityManager entityManager;
@@ -63,9 +78,11 @@ class SessionNotificationIntegrationTest extends MySqlContainerSupport {
     private final List<Long> taskParticipantIds = new ArrayList<>();
     private final List<Long> taskNotificationIds = new ArrayList<>();
     private final List<Long> taskUserIds = new ArrayList<>();
+    private final List<Long> taskChatRoomIds = new ArrayList<>();
 
     @AfterEach
     void cleanTaskOwnedRows() {
+        deleteTaskOwnedChatRows();
         notificationRepository.deleteAllById(taskNotificationIds);
         sessionParticipantRepository.deleteAllById(taskParticipantIds);
         sessionRepository.deleteAllById(taskSessionIds);
@@ -77,6 +94,7 @@ class SessionNotificationIntegrationTest extends MySqlContainerSupport {
         User host = user("승인 호스트");
         User applicant = user("승인 신청자");
         Session session = session(host, "승인 테스트 러닝");
+        createGroupRoom(session);
 
         SessionParticipant participation = join(host, applicant, session);
         sessionService.approveJoinRequest(host.getId(), session.getId(), participation.getId());
@@ -201,6 +219,30 @@ class SessionNotificationIntegrationTest extends MySqlContainerSupport {
                 .orElseThrow();
         taskParticipantIds.add(participation.getId());
         return participation;
+    }
+
+    private void createGroupRoom(Session session) {
+        ChatRoom room = chatRoomRepository.saveAndFlush(ChatRoom.group(session));
+        chatRoomMemberRepository.saveAndFlush(
+                ChatRoomMember.join(room, session.getHostUser(), ChatMemberRole.HOST));
+        taskChatRoomIds.add(room.getId());
+    }
+
+    private void deleteTaskOwnedChatRows() {
+        List<Long> messageIds = chatMessageRepository.findAll().stream()
+                .filter(message -> taskChatRoomIds.contains(message.getRoom().getId()))
+                .map(message -> message.getId())
+                .toList();
+        chatOutboxRepository.deleteAll(chatOutboxRepository.findAll().stream()
+                .filter(outbox -> messageIds.contains(outbox.getAggregateId()))
+                .toList());
+        chatMessageRepository.deleteAllById(messageIds);
+        chatRoomMemberRepository.deleteAllById(chatRoomMemberRepository.findAll().stream()
+                .filter(member -> taskChatRoomIds.contains(member.getRoom().getId()))
+                .map(member -> member.getId())
+                .toList());
+        chatRoomRepository.deleteAllById(taskChatRoomIds);
+        taskChatRoomIds.clear();
     }
 
     private List<Notification> reloadedNotifications(Long sessionId) {

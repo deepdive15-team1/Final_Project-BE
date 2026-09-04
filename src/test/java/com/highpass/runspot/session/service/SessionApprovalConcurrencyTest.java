@@ -7,6 +7,13 @@ import com.highpass.runspot.auth.domain.AgeGroup;
 import com.highpass.runspot.auth.domain.Gender;
 import com.highpass.runspot.auth.domain.User;
 import com.highpass.runspot.auth.domain.dao.UserRepository;
+import com.highpass.runspot.chat.domain.ChatMemberRole;
+import com.highpass.runspot.chat.domain.ChatRoom;
+import com.highpass.runspot.chat.domain.ChatRoomMember;
+import com.highpass.runspot.chat.outbox.ChatOutboxRepository;
+import com.highpass.runspot.chat.repository.ChatMessageRepository;
+import com.highpass.runspot.chat.repository.ChatRoomMemberRepository;
+import com.highpass.runspot.chat.repository.ChatRoomRepository;
 import com.highpass.runspot.common.util.GeometryUtil;
 import com.highpass.runspot.session.domain.GenderPolicy;
 import com.highpass.runspot.session.domain.ParticipationStatus;
@@ -15,9 +22,12 @@ import com.highpass.runspot.session.domain.Session;
 import com.highpass.runspot.session.domain.SessionParticipant;
 import com.highpass.runspot.session.domain.dao.SessionParticipantRepository;
 import com.highpass.runspot.session.domain.dao.SessionRepository;
+import com.highpass.runspot.session.exception.SessionErrorCode;
+import com.highpass.runspot.session.exception.SessionException;
 import com.highpass.runspot.support.MySqlContainerSupport;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -45,8 +55,17 @@ class SessionApprovalConcurrencyTest extends MySqlContainerSupport {
     private SessionRepository sessionRepository;
     @Autowired
     private SessionParticipantRepository sessionParticipantRepository;
+    @Autowired
+    private ChatRoomRepository chatRoomRepository;
+    @Autowired
+    private ChatRoomMemberRepository chatRoomMemberRepository;
+    @Autowired
+    private ChatMessageRepository chatMessageRepository;
+    @Autowired
+    private ChatOutboxRepository chatOutboxRepository;
 
     private ExecutorService executor;
+    private final List<Long> taskChatRoomIds = new ArrayList<>();
 
     @BeforeEach
     void setUp() {
@@ -59,6 +78,7 @@ class SessionApprovalConcurrencyTest extends MySqlContainerSupport {
     void tearDown() throws InterruptedException {
         executor.shutdownNow();
         assertThat(executor.awaitTermination(WAIT_SECONDS, SECONDS)).isTrue();
+        deleteTaskOwnedChatRows();
         sessionParticipantRepository.deleteAll();
         sessionRepository.deleteAll();
     }
@@ -70,6 +90,7 @@ class SessionApprovalConcurrencyTest extends MySqlContainerSupport {
         User firstApplicant = userRepository.saveAndFlush(user("first", "첫번째"));
         User secondApplicant = userRepository.saveAndFlush(user("second", "두번째"));
         Session session = sessionRepository.saveAndFlush(session(host));
+        createGroupRoom(session);
         SessionParticipant firstRequest = sessionParticipantRepository.saveAndFlush(request(session, firstApplicant));
         SessionParticipant secondRequest = sessionParticipantRepository.saveAndFlush(request(session, secondApplicant));
         CountDownLatch ready = new CountDownLatch(2);
@@ -111,8 +132,8 @@ class SessionApprovalConcurrencyTest extends MySqlContainerSupport {
         try {
             sessionService.approveJoinRequest(hostId, sessionId, participationId);
             return ApprovalOutcome.APPROVED;
-        } catch (IllegalStateException exception) {
-            assertThat(exception).hasMessage("모집 인원이 마감되어 승인할 수 없습니다.");
+        } catch (SessionException exception) {
+            assertThat(exception.getExceptionType()).isEqualTo(SessionErrorCode.SESSION_CAPACITY_EXCEEDED);
             return ApprovalOutcome.CAPACITY_REJECTED;
         }
     }
@@ -148,6 +169,30 @@ class SessionApprovalConcurrencyTest extends MySqlContainerSupport {
                 .session(session)
                 .user(applicant)
                 .build();
+    }
+
+    private void createGroupRoom(Session session) {
+        ChatRoom room = chatRoomRepository.saveAndFlush(ChatRoom.group(session));
+        chatRoomMemberRepository.saveAndFlush(
+                ChatRoomMember.join(room, session.getHostUser(), ChatMemberRole.HOST));
+        taskChatRoomIds.add(room.getId());
+    }
+
+    private void deleteTaskOwnedChatRows() {
+        List<Long> messageIds = chatMessageRepository.findAll().stream()
+                .filter(message -> taskChatRoomIds.contains(message.getRoom().getId()))
+                .map(message -> message.getId())
+                .toList();
+        chatOutboxRepository.deleteAll(chatOutboxRepository.findAll().stream()
+                .filter(outbox -> messageIds.contains(outbox.getAggregateId()))
+                .toList());
+        chatMessageRepository.deleteAllById(messageIds);
+        chatRoomMemberRepository.deleteAllById(chatRoomMemberRepository.findAll().stream()
+                .filter(member -> taskChatRoomIds.contains(member.getRoom().getId()))
+                .map(member -> member.getId())
+                .toList());
+        chatRoomRepository.deleteAllById(taskChatRoomIds);
+        taskChatRoomIds.clear();
     }
 
     private enum ApprovalOutcome {
