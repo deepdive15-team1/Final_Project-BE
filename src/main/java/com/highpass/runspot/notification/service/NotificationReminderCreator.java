@@ -5,6 +5,7 @@ import com.highpass.runspot.notification.domain.NotificationActionStatus;
 import com.highpass.runspot.notification.domain.NotificationActionType;
 import com.highpass.runspot.notification.domain.NotificationType;
 import com.highpass.runspot.notification.domain.dao.NotificationRepository;
+import com.highpass.runspot.notification.push.service.PushOutboxEnqueuer;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
@@ -15,10 +16,11 @@ import org.springframework.transaction.annotation.Transactional;
 public class NotificationReminderCreator {
 
     private final NotificationRepository notificationRepository;
+    private final PushOutboxEnqueuer pushOutboxEnqueuer;
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void createReminder(Long sessionId, String sessionTitle, Long recipientUserId) {
-        notificationRepository.saveAndFlush(Notification.builder()
+        Notification reminder = notificationRepository.saveAndFlush(Notification.builder()
                 .recipientUserId(recipientUserId)
                 .type(NotificationType.SESSION_START_REMINDER)
                 .title("러닝 시작 30분 전")
@@ -28,5 +30,6 @@ public class NotificationReminderCreator {
                 .actionStatus(NotificationActionStatus.NONE)
                 .deduplicationKey("SESSION_START_REMINDER:" + sessionId + ":" + recipientUserId)
                 .build());
+        pushOutboxEnqueuer.enqueue(reminder);
     }
 }

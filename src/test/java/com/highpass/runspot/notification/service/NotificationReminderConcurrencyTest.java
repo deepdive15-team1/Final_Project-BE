@@ -3,8 +3,14 @@ package com.highpass.runspot.notification.service;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.google.firebase.FirebaseApp;
+import com.google.firebase.messaging.FirebaseMessaging;
 import com.highpass.runspot.auth.domain.User;
 import com.highpass.runspot.notification.domain.Notification;
+import com.highpass.runspot.notification.push.domain.PushDeviceToken;
+import com.highpass.runspot.notification.push.domain.PushPlatform;
+import com.highpass.runspot.notification.push.domain.dao.PushDeviceTokenRepository;
+import com.highpass.runspot.notification.push.outbox.PushOutboxRepository;
 import com.highpass.runspot.session.domain.ParticipationStatus;
 import com.highpass.runspot.session.domain.Session;
 import com.highpass.runspot.session.domain.SessionStatus;
@@ -17,10 +23,22 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.test.context.TestPropertySource;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
+@TestPropertySource(properties = "push.fcm.enabled=true")
 class NotificationReminderConcurrencyTest extends NotificationReminderIntegrationSupport {
 
     private static final int WAIT_SECONDS = 10;
+    @MockitoBean
+    private FirebaseApp firebaseApp;
+    @MockitoBean
+    private FirebaseMessaging firebaseMessaging;
+    @Autowired
+    private PushDeviceTokenRepository pushDeviceTokenRepository;
+    @Autowired
+    private PushOutboxRepository pushOutboxRepository;
     private ExecutorService executor;
 
     @BeforeEach
@@ -32,6 +50,8 @@ class NotificationReminderConcurrencyTest extends NotificationReminderIntegratio
     void stopExecutor() throws InterruptedException {
         executor.shutdownNow();
         assertThat(executor.awaitTermination(WAIT_SECONDS, SECONDS)).isTrue();
+        pushOutboxRepository.deleteAll();
+        pushDeviceTokenRepository.deleteAll();
     }
 
     @Test
@@ -41,6 +61,8 @@ class NotificationReminderConcurrencyTest extends NotificationReminderIntegratio
         User approved = user("승인");
         Session sequentialSession = session(host, FIXED_NOW.plusMinutes(30), SessionStatus.OPEN);
         participant(sequentialSession, approved, ParticipationStatus.APPROVED);
+        registerToken(host);
+        registerToken(approved);
 
         scheduler.sendSessionStartReminders();
         scheduler.sendSessionStartReminders();
@@ -67,6 +89,8 @@ class NotificationReminderConcurrencyTest extends NotificationReminderIntegratio
         User approved = user("승인");
         Session session = session(host, FIXED_NOW.plusMinutes(30), SessionStatus.OPEN);
         participant(session, approved, ParticipationStatus.APPROVED);
+        registerToken(host);
+        registerToken(approved);
         creator.createReminder(session.getId(), session.getTitle(), host.getId());
 
         scheduler.sendSessionStartReminders();
@@ -95,5 +119,14 @@ class NotificationReminderConcurrencyTest extends NotificationReminderIntegratio
         assertThat(reminders).extracting(Notification::getRecipientUserId)
                 .containsExactlyInAnyOrder(host.getId(), approved.getId());
         assertThat(reminders).extracting(Notification::getDeduplicationKey).doesNotHaveDuplicates();
+        assertThat(pushOutboxRepository.count()).isEqualTo(notificationRepository.count());
+    }
+
+    private void registerToken(User user) {
+        pushDeviceTokenRepository.saveAndFlush(PushDeviceToken.builder()
+                .userId(user.getId())
+                .token("reminder-token-" + user.getId())
+                .platform(PushPlatform.ANDROID)
+                .build());
     }
 }

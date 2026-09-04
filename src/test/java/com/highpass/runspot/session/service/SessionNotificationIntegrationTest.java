@@ -20,6 +20,7 @@ import com.highpass.runspot.notification.domain.NotificationActionStatus;
 import com.highpass.runspot.notification.domain.NotificationActionType;
 import com.highpass.runspot.notification.domain.NotificationType;
 import com.highpass.runspot.notification.domain.dao.NotificationRepository;
+import com.highpass.runspot.notification.push.outbox.PushOutboxRepository;
 import com.highpass.runspot.session.domain.GenderPolicy;
 import com.highpass.runspot.session.domain.ParticipationStatus;
 import com.highpass.runspot.session.domain.RunType;
@@ -62,6 +63,8 @@ class SessionNotificationIntegrationTest extends MySqlContainerSupport {
     @Autowired
     private NotificationRepository notificationRepository;
     @Autowired
+    private PushOutboxRepository pushOutboxRepository;
+    @Autowired
     private ChatRoomRepository chatRoomRepository;
     @Autowired
     private ChatRoomMemberRepository chatRoomMemberRepository;
@@ -83,6 +86,7 @@ class SessionNotificationIntegrationTest extends MySqlContainerSupport {
     @AfterEach
     void cleanTaskOwnedRows() {
         deleteTaskOwnedChatRows();
+        pushOutboxRepository.deleteAll();
         notificationRepository.deleteAllById(taskNotificationIds);
         sessionParticipantRepository.deleteAllById(taskParticipantIds);
         sessionRepository.deleteAllById(taskSessionIds);
@@ -110,6 +114,7 @@ class SessionNotificationIntegrationTest extends MySqlContainerSupport {
                 NotificationType.PARTICIPATION_APPROVED, applicant.getId(), host.getId(), host.getName(),
                 "참여가 확정되었습니다!", "[승인 테스트 러닝] 참여 신청이 승인되었습니다.",
                 NotificationActionType.NAVIGATE, NotificationActionStatus.NONE, session.getId(), participation.getId());
+        assertThat(pushOutboxRepository.count()).isZero();
     }
 
     @Test
@@ -130,6 +135,7 @@ class SessionNotificationIntegrationTest extends MySqlContainerSupport {
                 NotificationType.PARTICIPATION_REJECTED, applicant.getId(), host.getId(), host.getName(),
                 "참여 신청이 거절되었습니다.", "[거절 테스트 러닝] 참여 신청이 거절되었습니다.",
                 NotificationActionType.NAVIGATE, NotificationActionStatus.NONE, session.getId(), participation.getId());
+        assertThat(pushOutboxRepository.count()).isZero();
     }
 
     @Test
@@ -151,6 +157,7 @@ class SessionNotificationIntegrationTest extends MySqlContainerSupport {
                 NotificationType.PARTICIPANT_KICKED, applicant.getId(), host.getId(), host.getName(),
                 "세션 참여가 취소되었습니다.", "[강퇴 테스트 러닝] 참여자 명단에서 제외되었습니다.",
                 NotificationActionType.NAVIGATE, NotificationActionStatus.NONE, session.getId(), participation.getId());
+        assertThat(pushOutboxRepository.count()).isZero();
     }
 
     @Test

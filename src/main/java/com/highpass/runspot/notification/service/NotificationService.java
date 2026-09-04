@@ -6,6 +6,7 @@ import com.highpass.runspot.notification.domain.NotificationActionStatus;
 import com.highpass.runspot.notification.domain.NotificationActionType;
 import com.highpass.runspot.notification.domain.NotificationType;
 import com.highpass.runspot.notification.domain.dao.NotificationRepository;
+import com.highpass.runspot.notification.push.service.PushOutboxEnqueuer;
 import com.highpass.runspot.session.domain.Session;
 import com.highpass.runspot.session.domain.SessionParticipant;
 import lombok.RequiredArgsConstructor;
@@ -18,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class NotificationService {
 
     private final NotificationRepository notificationRepository;
+    private final PushOutboxEnqueuer pushOutboxEnqueuer;
 
     public void notifyParticipationRequested(SessionParticipant participation) {
         Session session = participation.getSession();
@@ -75,7 +77,7 @@ public class NotificationService {
             NotificationContent content
     ) {
         Session session = participation.getSession();
-        notificationRepository.save(Notification.builder()
+        Notification notification = notificationRepository.save(Notification.builder()
                 .recipientUserId(recipient.getId())
                 .actorUserId(actor.getId())
                 .actorName(actor.getName())
@@ -88,6 +90,7 @@ public class NotificationService {
                 .actionStatus(content.actionStatus())
                 .deduplicationKey(content.type() + ":" + participation.getId() + ":" + recipient.getId())
                 .build());
+        pushOutboxEnqueuer.enqueue(notification);
     }
 
     private void resolvePendingRequest(SessionParticipant participation, Long hostUserId) {

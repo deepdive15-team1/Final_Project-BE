@@ -7,13 +7,18 @@ import com.highpass.runspot.notification.domain.Notification;
 import com.highpass.runspot.notification.domain.NotificationActionStatus;
 import com.highpass.runspot.notification.domain.NotificationActionType;
 import com.highpass.runspot.notification.domain.NotificationType;
+import com.highpass.runspot.notification.push.outbox.PushOutboxRepository;
 import com.highpass.runspot.session.domain.ParticipationStatus;
 import com.highpass.runspot.session.domain.Session;
 import com.highpass.runspot.session.domain.SessionStatus;
 import java.util.List;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 
 class NotificationReminderSchedulerTest extends NotificationReminderIntegrationSupport {
+
+    @Autowired
+    private PushOutboxRepository pushOutboxRepository;
 
     @Test
     void 고정시각의_30분_이상_31분_미만_OPEN_CLOSED_세션만_대상이다() {
@@ -31,6 +36,7 @@ class NotificationReminderSchedulerTest extends NotificationReminderIntegrationS
         assertThat(notificationRepository.findAll())
                 .extracting(Notification::getSessionId)
                 .containsExactlyInAnyOrder(atWindowStart.getId(), beforeWindowEnd.getId());
+        assertThat(pushOutboxRepository.count()).isZero();
     }
 
     @Test
@@ -68,5 +74,6 @@ class NotificationReminderSchedulerTest extends NotificationReminderIntegrationS
             assertThat(reminder.getDeduplicationKey()).isEqualTo(
                     "SESSION_START_REMINDER:" + session.getId() + ":" + reminder.getRecipientUserId());
         });
+        assertThat(pushOutboxRepository.count()).isZero();
     }
 }

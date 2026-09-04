@@ -10,6 +10,7 @@ import com.highpass.runspot.notification.domain.NotificationActionStatus;
 import com.highpass.runspot.notification.domain.NotificationActionType;
 import com.highpass.runspot.notification.domain.NotificationType;
 import com.highpass.runspot.notification.domain.dao.NotificationRepository;
+import com.highpass.runspot.notification.push.service.PushOutboxEnqueuer;
 import com.highpass.runspot.session.domain.Session;
 import com.highpass.runspot.session.domain.SessionParticipant;
 import java.util.Optional;
@@ -32,6 +33,8 @@ class NotificationServiceTest {
 
     @Mock
     private NotificationRepository notificationRepository;
+    @Mock
+    private PushOutboxEnqueuer pushOutboxEnqueuer;
     @Captor
     private ArgumentCaptor<Notification> notificationCaptor;
     @InjectMocks
@@ -41,6 +44,8 @@ class NotificationServiceTest {
 
     @BeforeEach
     void setUp() {
+        when(notificationRepository.save(org.mockito.ArgumentMatchers.any(Notification.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
         User host = User.builder().id(HOST_ID).name("호스트").build();
         User applicant = User.builder().id(APPLICANT_ID).name("신청자").build();
         Session session = Session.builder().id(SESSION_ID).hostUser(host).title("한강 야간 러닝").build();
@@ -49,6 +54,15 @@ class NotificationServiceTest {
                 .session(session)
                 .user(applicant)
                 .build();
+    }
+
+    @Test
+    void 저장된_알림을_아웃박스_인큐어에게_전달한다() {
+        notificationService.notifyParticipationRequested(participation);
+
+        Notification notification = capturedNotification();
+
+        verify(pushOutboxEnqueuer).enqueue(notification);
     }
 
     @Test

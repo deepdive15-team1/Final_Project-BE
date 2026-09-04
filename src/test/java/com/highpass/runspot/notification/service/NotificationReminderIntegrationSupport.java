@@ -6,6 +6,8 @@ import com.highpass.runspot.auth.domain.User;
 import com.highpass.runspot.auth.domain.dao.UserRepository;
 import com.highpass.runspot.common.util.GeometryUtil;
 import com.highpass.runspot.notification.domain.dao.NotificationRepository;
+import com.highpass.runspot.notification.push.domain.dao.PushDeviceTokenRepository;
+import com.highpass.runspot.notification.push.outbox.PushOutboxRepository;
 import com.highpass.runspot.session.domain.GenderPolicy;
 import com.highpass.runspot.session.domain.ParticipationStatus;
 import com.highpass.runspot.session.domain.RunType;
@@ -46,6 +48,10 @@ abstract class NotificationReminderIntegrationSupport extends MySqlContainerSupp
     @Autowired
     protected NotificationRepository notificationRepository;
     @Autowired
+    protected PushOutboxRepository pushOutboxRepository;
+    @Autowired
+    protected PushDeviceTokenRepository pushDeviceTokenRepository;
+    @Autowired
     protected UserRepository userRepository;
     @Autowired
     protected SessionRepository sessionRepository;
@@ -54,7 +60,9 @@ abstract class NotificationReminderIntegrationSupport extends MySqlContainerSupp
 
     @BeforeEach
     void cleanReminderData() {
+        pushOutboxRepository.deleteAll();
         notificationRepository.deleteAll();
+        pushDeviceTokenRepository.deleteAll();
         sessionParticipantRepository.deleteAll();
         sessionRepository.deleteAll();
     }
