@@ -5,6 +5,7 @@ import com.highpass.runspot.notification.push.domain.PushPlatform;
 import com.highpass.runspot.notification.push.domain.dao.PushDeviceTokenRepository;
 import com.highpass.runspot.notification.push.exception.PushDeviceTokenErrorCode;
 import com.highpass.runspot.notification.push.exception.PushDeviceTokenException;
+import com.highpass.runspot.notification.push.outbox.PushOutboxRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.PessimisticLockingFailureException;
@@ -16,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class PushDeviceTokenService {
 
     private final PushDeviceTokenRepository pushDeviceTokenRepository;
+    private final PushOutboxRepository pushOutboxRepository;
 
     @Transactional
     public void upsert(Long userId, String token, PushPlatform platform) {
@@ -47,9 +49,16 @@ public class PushDeviceTokenService {
         }
     }
 
+    /**
+     * Revokes local delivery state; a send already issued to the provider cannot be recalled.
+     */
     @Transactional
     public void delete(Long userId) {
+        pushOutboxRepository.deleteUnsentByRecipientUserId(userId);
         pushDeviceTokenRepository.findByUserIdForUpdate(userId)
-                .ifPresent(pushDeviceTokenRepository::delete);
+                .ifPresent(token -> {
+                    pushDeviceTokenRepository.delete(token);
+                    pushDeviceTokenRepository.flush();
+                });
     }
 }

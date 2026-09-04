@@ -117,4 +117,24 @@ public interface PushOutboxRepository extends JpaRepository<PushOutbox, Long> {
               AND terminal_at < :cutoff
             """, nativeQuery = true)
     int deleteTerminalBefore(@Param("cutoff") LocalDateTime cutoff);
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query(value = """
+            DELETE FROM push_outbox
+            WHERE recipient_user_id = :recipientUserId
+              AND status IN ('PENDING', 'PROCESSING')
+            """, nativeQuery = true)
+    int deleteUnsentByRecipientUserId(@Param("recipientUserId") Long recipientUserId);
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query(value = """
+            DELETE FROM push_outbox
+            WHERE notification_id IN (
+                SELECT id
+                FROM notifications
+                WHERE recipient_user_id = :userId
+                   OR actor_user_id = :userId
+            )
+            """, nativeQuery = true)
+    int deleteAllRelatedToUserNotifications(@Param("userId") Long userId);
 }
