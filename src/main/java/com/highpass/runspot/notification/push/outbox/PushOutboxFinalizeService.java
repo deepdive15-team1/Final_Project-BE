@@ -1,6 +1,7 @@
 package com.highpass.runspot.notification.push.outbox;
 
 import com.highpass.runspot.notification.push.outbox.PushOutboxClaimService.ClaimedPushOutbox;
+import com.highpass.runspot.notification.push.domain.dao.PushDeviceTokenRepository;
 import java.time.LocalDateTime;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -13,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class PushOutboxFinalizeService {
 
     private final PushOutboxRepository pushOutboxRepository;
+    private final PushDeviceTokenRepository pushDeviceTokenRepository;
 
     public boolean markSent(ClaimedPushOutbox claim, LocalDateTime sentAt) {
         return pushOutboxRepository.markSent(
@@ -33,6 +35,20 @@ public class PushOutboxFinalizeService {
                 terminalAt,
                 errorCode
         ) == 1;
+    }
+
+    public boolean markFailedAndDeleteMatchingToken(
+            ClaimedPushOutbox claim,
+            LocalDateTime terminalAt,
+            String errorCode,
+            String failedToken,
+            boolean deleteToken
+    ) {
+        boolean finalized = markFailed(claim, terminalAt, errorCode);
+        if (finalized && deleteToken && "UNREGISTERED".equals(errorCode)) {
+            pushDeviceTokenRepository.deleteByUserIdAndToken(claim.recipientUserId(), failedToken);
+        }
+        return finalized;
     }
 
     public boolean markFailedWithoutAttempt(

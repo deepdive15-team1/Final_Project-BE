@@ -1,5 +1,6 @@
 package com.highpass.runspot.notification.push.outbox;
 
+import com.highpass.runspot.notification.push.config.FcmPushProperties;
 import java.time.LocalDateTime;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -10,12 +11,11 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class PushOutboxCleanupService {
 
-    private static final int RETENTION_DAYS = 30;
-
     private final PushOutboxRepository pushOutboxRepository;
+    private final FcmPushProperties fcmPushProperties;
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public int deleteExpiredTerminalRows(LocalDateTime now) {
-        return pushOutboxRepository.deleteTerminalBefore(now.minusDays(RETENTION_DAYS));
+        return pushOutboxRepository.deleteTerminalBefore(now.minus(fcmPushProperties.getTerminalRetention()));
     }
 }

@@ -2,6 +2,7 @@ package com.highpass.runspot.notification.push.outbox;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -21,6 +22,13 @@ public interface PushOutboxRepository extends JpaRepository<PushOutbox, Long> {
     List<PushOutbox> lockClaimable(
             @Param("now") LocalDateTime now,
             @Param("batchSize") int batchSize
+    );
+
+    Optional<PushOutbox> findByIdAndStatusAndLeaseTokenAndLeaseUntilAfter(
+            Long id,
+            PushOutboxStatus status,
+            String leaseToken,
+            LocalDateTime now
     );
 
     @Modifying(clearAutomatically = true, flushAutomatically = true)

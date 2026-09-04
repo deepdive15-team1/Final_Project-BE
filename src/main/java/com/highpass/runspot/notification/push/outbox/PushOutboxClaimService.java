@@ -1,6 +1,6 @@
 package com.highpass.runspot.notification.push.outbox;
 
-import java.time.Duration;
+import com.highpass.runspot.notification.push.config.FcmPushProperties;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -17,18 +17,16 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class PushOutboxClaimService {
 
-    private static final Duration LEASE_DURATION = Duration.ofSeconds(120);
-    private static final int MAX_BATCH_SIZE = 500;
-
     private final PushOutboxRepository pushOutboxRepository;
+    private final FcmPushProperties fcmPushProperties;
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public List<ClaimedPushOutbox> claim(int batchSize, LocalDateTime now) {
-        if (batchSize < 1 || batchSize > MAX_BATCH_SIZE) {
+        if (batchSize < 1 || batchSize > fcmPushProperties.getBatchSize()) {
             throw new IllegalArgumentException("푸시 아웃박스 배치 크기는 1 이상 500 이하여야 합니다.");
         }
 
-        LocalDateTime leaseUntil = now.plus(LEASE_DURATION);
+        LocalDateTime leaseUntil = now.plus(fcmPushProperties.getLeaseDuration());
         return pushOutboxRepository.lockClaimable(now, batchSize).stream()
                 .map(outbox -> claim(outbox, now, leaseUntil))
                 .toList();

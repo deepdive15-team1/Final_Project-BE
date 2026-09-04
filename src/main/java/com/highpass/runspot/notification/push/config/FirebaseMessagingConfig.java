@@ -4,7 +4,9 @@ import com.google.auth.oauth2.GoogleCredentials;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.FirebaseOptions;
 import com.google.firebase.messaging.FirebaseMessaging;
+import com.highpass.runspot.notification.push.service.PushJitterSource;
 import java.io.IOException;
+import java.util.concurrent.ThreadLocalRandom;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -28,5 +30,10 @@ public class FirebaseMessagingConfig {
     @ConditionalOnProperty(prefix = "push.fcm", name = "enabled", havingValue = "true")
     FirebaseMessaging firebaseMessaging(FirebaseApp firebaseApp) {
         return FirebaseMessaging.getInstance(firebaseApp);
+    }
+
+    @Bean
+    PushJitterSource pushJitterSource() {
+        return () -> ThreadLocalRandom.current().nextDouble();
     }
 }
