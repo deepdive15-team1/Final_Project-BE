@@ -23,3 +23,12 @@ jwt:
 
 sentry:
   dsn: ""
+  enabled: false
+
+notification:
+  reminder:
+    enabled: false
+
+push:
+  fcm:
+    enabled: false

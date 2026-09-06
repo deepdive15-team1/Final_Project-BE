@@ -7,6 +7,7 @@ import com.highpass.runspot.auth.domain.dao.UserRepository;
 import com.highpass.runspot.auth.domain.dao.UserRunningStatsRepository;
 import com.highpass.runspot.auth.service.UserStatsService;
 import com.highpass.runspot.auth.service.dto.response.MyCreatedRunningsResponse;
+import com.highpass.runspot.notification.service.NotificationService;
 import com.highpass.runspot.rating.domain.RatingTargetType;
 import com.highpass.runspot.rating.domain.dao.RatingRepository;
 import com.highpass.runspot.session.domain.AttendanceStatus;
@@ -47,6 +48,7 @@ public class SessionService {
     private final UserStatsService userStatsService;
     private final RatingRepository ratingRepository;
     private final ApplicationEventPublisher eventPublisher;
+    private final NotificationService notificationService;
 
     @Transactional
     public SessionResponse createSession(Long userId, SessionCreateRequest request) {
@@ -184,7 +186,8 @@ public class SessionService {
             .messageToHost(request.messageToHost())
             .build(); // status 기본값 REQUESTED, attendanceStatus 기본값 ABSENT
 
-        sessionParticipantRepository.save(participant);
+        SessionParticipant savedParticipant = sessionParticipantRepository.save(participant);
+        notificationService.notifyParticipationRequested(savedParticipant);
     }
 
     public List<SessionParticipantResponse> getJoinRequests(Long userId, Long sessionId, ParticipationStatus status) {
@@ -218,12 +221,10 @@ public class SessionService {
             throw new IllegalStateException("호스트만 승인할 수 있습니다.");
         }
 
-        SessionParticipant participant = sessionParticipantRepository.findById(participationId)
+        SessionParticipant participant = sessionParticipantRepository.findByIdForUpdate(participationId)
             .orElseThrow(() -> new IllegalArgumentException("신청 정보를 찾을 수 없습니다."));
 
-        if (!participant.getSession().getId().equals(sessionId)) {
-            throw new SessionException(SessionErrorCode.PARTICIPANT_SESSION_MISMATCH);
-        }
+        validateParticipationSession(sessionId, participant);
 
         // 인원 마감 체크 (승인 시점에 다시 한번 체크)
         long approvedCount = sessionParticipantRepository.countBySessionIdAndStatus(sessionId, ParticipationStatus.APPROVED);
@@ -233,11 +234,12 @@ public class SessionService {
 
         participant.approve();
         eventPublisher.publishEvent(new ParticipantApprovedEvent(sessionId, participant.getUser().getId()));
+        notificationService.notifyParticipationApproved(participant);
     }
 
     @Transactional
     public void rejectJoinRequest(Long userId, Long sessionId, Long participationId) {
-        Session session = sessionRepository.findById(sessionId)
+        Session session = sessionRepository.findByIdForUpdate(sessionId)
             .orElseThrow(() -> new IllegalArgumentException("세션을 찾을 수 없습니다. ID: " + sessionId));
 
         // 호스트 검증
@@ -245,14 +247,18 @@ public class SessionService {
             throw new IllegalStateException("호스트만 거절할 수 있습니다.");
         }
 
-        SessionParticipant participant = sessionParticipantRepository.findById(participationId)
+        SessionParticipant participant = sessionParticipantRepository.findByIdForUpdate(participationId)
             .orElseThrow(() -> new IllegalArgumentException("신청 정보를 찾을 수 없습니다."));
 
-        if (!participant.getSession().getId().equals(sessionId)) {
-            throw new SessionException(SessionErrorCode.PARTICIPANT_SESSION_MISMATCH);
-        }
-
+        validateParticipationSession(sessionId, participant);
         participant.reject();
+        notificationService.notifyParticipationRejected(participant);
+    }
+
+    private void validateParticipationSession(Long sessionId, SessionParticipant participant) {
+        if (!Objects.equals(participant.getSession().getId(), sessionId)) {
+            throw new IllegalArgumentException("신청 정보가 해당 세션에 속하지 않습니다.");
+        }
     }
 
     public List<SessionParticipantResponse> getAttendanceList(Long userId, Long sessionId) {
@@ -394,6 +400,7 @@ public class SessionService {
         }
 
         participant.kick();
+        notificationService.notifyParticipantKicked(participant);
     }
 
     private void validateGenderPolicy(GenderPolicy policy, Gender userGender) {

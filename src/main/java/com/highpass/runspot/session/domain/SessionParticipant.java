@@ -66,10 +66,16 @@ public class SessionParticipant extends BaseTimeEntity {
 
     // 비즈니스 로직
     public void approve() {
+        if (this.status != ParticipationStatus.REQUESTED) {
+            throw new IllegalStateException("대기 상태의 참여자만 승인할 수 있습니다.");
+        }
         this.status = ParticipationStatus.APPROVED;
     }
 
     public void reject() {
+        if (this.status != ParticipationStatus.REQUESTED) {
+            throw new IllegalStateException("대기 상태의 참여자만 거절할 수 있습니다.");
+        }
         this.status = ParticipationStatus.REJECTED;
     }
 

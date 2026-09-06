@@ -35,6 +35,24 @@ spring:
           initial-interval: 1000ms
           multiplier: 2
 
+notification:
+  reminder:
+    enabled: true
+
+push:
+  fcm:
+    enabled: ${PUSH_FCM_ENABLED:false}
+    batch-size: 100
+    publish-delay: 1s
+    max-attempts: 5
+    initial-backoff: 5s
+    max-backoff: 300s
+    jitter: 0.2
+    lease-duration: 120s
+    terminal-retention: 30d
+    cleanup-cron: "0 15 3 * * *"
+    cleanup-zone-id: Asia/Seoul
+
 server:
   port: 8080
 
