@@ -73,6 +73,8 @@ GitHub 레포 → Settings → Secrets and variables → Actions 에서 아래 �
 | `DB_URL` | `jdbc:mysql://host:3306/runspot` |
 | `DB_USERNAME` | DB 사용자명 |
 | `DB_PASSWORD` | DB 비밀번호 |
+| `JWT_SECRET` | JJWT 서명에 사용하는 Base64 인코딩 시크릿 |
+| `SENTRY_DSN` | Sentry 프로젝트 DSN |
 | `FIREBASE_SERVICE_ACCOUNT_JSON_BASE64` | 줄바꿈 없는 Firebase 서비스 계정 JSON의 Base64 값 |
 
 `FIREBASE_SERVICE_ACCOUNT_JSON_BASE64`는 서비스 계정 JSON 자체가 아니다. JSON 파일은 저장소, `.env`, CI 로그에 넣지 않는다. 안전한 관리 단말에서 GitHub CLI로 줄바꿈 없는 값을 바로 등록한다.
