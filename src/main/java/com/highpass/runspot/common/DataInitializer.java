@@ -175,13 +175,13 @@ public class DataInitializer implements CommandLineRunner {
         double currentX = startX;
         double currentY = startY;
 
-        route.add(new Session.RoutePoint(BigDecimal.valueOf(currentX), BigDecimal.valueOf(currentY)));
+        route.add(new Session.RoutePoint(BigDecimal.valueOf(currentX), BigDecimal.valueOf(currentY), null, null));
 
         // 5~10개의 점을 이어 경로 생성
         for (int i = 0; i < 5 + random.nextInt(6); i++) {
             currentX += (random.nextDouble() - 0.5) * 0.002; // 약 100m 이동
             currentY += (random.nextDouble() - 0.5) * 0.002;
-            route.add(new Session.RoutePoint(BigDecimal.valueOf(currentX), BigDecimal.valueOf(currentY)));
+            route.add(new Session.RoutePoint(BigDecimal.valueOf(currentX), BigDecimal.valueOf(currentY), null, null));
         }
         return route;
     }

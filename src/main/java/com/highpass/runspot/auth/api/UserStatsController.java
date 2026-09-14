@@ -7,7 +7,6 @@ import com.highpass.runspot.auth.service.dto.response.RecentRunningsResponse;
 import com.highpass.runspot.auth.service.dto.response.UserProfileResponse;
 import com.highpass.runspot.common.security.UserPrincipal;
 import com.highpass.runspot.session.service.SessionService;
-import com.highpass.runspot.session.service.dto.response.SessionResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -35,7 +34,7 @@ public class UserStatsController {
             throw new IllegalStateException("로그인이 필요합니다.");
         }
 
-        UserProfileResponse response = userStatsService.getMyProfile(principal.getId());
+        UserProfileResponse response = userStatsService.getProfile(principal.getId());
         return ResponseEntity.ok(response);
     }
 

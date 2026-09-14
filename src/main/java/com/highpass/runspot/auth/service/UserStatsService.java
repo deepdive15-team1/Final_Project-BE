@@ -27,7 +27,7 @@ public class UserStatsService {
     private final UserRunningStatsRepository userRunningStatsRepository;
     private final SessionParticipantRepository sessionParticipantRepository;
 
-    public UserProfileResponse getMyProfile(Long userId) {
+    public UserProfileResponse getProfile(Long userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다. ID: " + userId));
 
