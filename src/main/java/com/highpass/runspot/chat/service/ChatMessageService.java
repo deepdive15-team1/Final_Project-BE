@@ -3,10 +3,11 @@ package com.highpass.runspot.chat.service;
 import com.highpass.runspot.auth.domain.User;
 import com.highpass.runspot.auth.domain.dao.UserRepository;
 import com.highpass.runspot.chat.domain.*;
-import com.highpass.runspot.chat.dto.*;
+import com.highpass.runspot.chat.service.dto.request.*;
+import com.highpass.runspot.chat.service.dto.response.*;
 import com.highpass.runspot.chat.exception.*;
 import com.highpass.runspot.chat.outbox.ChatOutboxService;
-import com.highpass.runspot.chat.repository.*;
+import com.highpass.runspot.chat.domain.dao.*;
 import com.highpass.runspot.file.service.S3PresignService;
 
 import lombok.RequiredArgsConstructor;

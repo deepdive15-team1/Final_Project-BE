@@ -7,7 +7,7 @@ import com.highpass.runspot.auth.domain.User;
 import com.highpass.runspot.auth.domain.dao.UserRepository;
 import com.highpass.runspot.chat.domain.*;
 import com.highpass.runspot.chat.outbox.ChatOutboxService;
-import com.highpass.runspot.chat.repository.*;
+import com.highpass.runspot.chat.domain.dao.*;
 import com.highpass.runspot.session.domain.Session;
 import com.highpass.runspot.session.domain.dao.SessionRepository;
 import com.highpass.runspot.session.event.*;

@@ -1,7 +1,7 @@
 package com.highpass.runspot.community.service;
 
 import com.highpass.runspot.community.domain.Tag;
-import com.highpass.runspot.community.repository.TagRepository;
+import com.highpass.runspot.community.domain.dao.TagRepository;
 
 import lombok.RequiredArgsConstructor;
 

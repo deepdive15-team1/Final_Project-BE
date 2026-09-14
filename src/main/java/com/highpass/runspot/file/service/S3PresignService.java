@@ -3,9 +3,10 @@ package com.highpass.runspot.file.service;
 import com.highpass.runspot.auth.domain.User;
 import com.highpass.runspot.auth.domain.dao.UserRepository;
 import com.highpass.runspot.file.domain.UploadedFile;
-import com.highpass.runspot.file.dto.*;
+import com.highpass.runspot.file.service.dto.request.*;
+import com.highpass.runspot.file.service.dto.response.*;
 import com.highpass.runspot.file.exception.*;
-import com.highpass.runspot.file.repository.UploadedFileRepository;
+import com.highpass.runspot.file.domain.dao.UploadedFileRepository;
 
 import lombok.RequiredArgsConstructor;
 

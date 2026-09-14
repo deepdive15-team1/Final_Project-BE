@@ -1,6 +1,6 @@
 package com.highpass.runspot.chat.config;
 
-import com.highpass.runspot.chat.repository.ChatRoomMemberRepository;
+import com.highpass.runspot.chat.domain.dao.ChatRoomMemberRepository;
 import com.highpass.runspot.common.jwt.JwtProvider;
 
 import lombok.RequiredArgsConstructor;

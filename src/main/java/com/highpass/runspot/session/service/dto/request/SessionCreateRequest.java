@@ -52,10 +52,12 @@ public record SessionCreateRequest(
 ) {
     public record RoutePointDto(
             BigDecimal x,
-            BigDecimal y //프론트에서 넘겨주는 값 보고 변경
+            BigDecimal y, //프론트에서 넘겨주는 값 보고 변경
+            String alias, // 마커 별칭
+            String detail // 마커 상세내용
     ) {
         public Session.RoutePoint toDomain() {
-            return new Session.RoutePoint(x, y);
+            return new Session.RoutePoint(x, y, alias, detail);
         }
     }
 

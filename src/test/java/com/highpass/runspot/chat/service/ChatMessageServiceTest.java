@@ -5,9 +5,9 @@ import static org.mockito.Mockito.when;
 
 import com.highpass.runspot.auth.domain.dao.UserRepository;
 import com.highpass.runspot.chat.domain.*;
-import com.highpass.runspot.chat.dto.ChatSendRequest;
+import com.highpass.runspot.chat.service.dto.request.ChatSendRequest;
 import com.highpass.runspot.chat.exception.*;
-import com.highpass.runspot.chat.repository.*;
+import com.highpass.runspot.chat.domain.dao.*;
 import com.highpass.runspot.file.service.S3PresignService;
 
 import org.junit.jupiter.api.Test;

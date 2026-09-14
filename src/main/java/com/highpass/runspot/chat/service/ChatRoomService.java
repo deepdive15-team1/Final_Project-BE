@@ -1,11 +1,13 @@
 package com.highpass.runspot.chat.service;
 
 import com.highpass.runspot.auth.domain.User;
+import com.highpass.runspot.auth.domain.dao.UserBlockRepository;
 import com.highpass.runspot.auth.domain.dao.UserRepository;
 import com.highpass.runspot.chat.domain.*;
-import com.highpass.runspot.chat.dto.*;
+import com.highpass.runspot.chat.service.dto.request.*;
+import com.highpass.runspot.chat.service.dto.response.*;
 import com.highpass.runspot.chat.exception.*;
-import com.highpass.runspot.chat.repository.*;
+import com.highpass.runspot.chat.domain.dao.*;
 import com.highpass.runspot.session.domain.Session;
 import com.highpass.runspot.session.domain.dao.SessionRepository;
 
@@ -29,6 +31,7 @@ public class ChatRoomService {
     private final ChatMessageRepository messages;
     private final SessionRepository sessions;
     private final UserRepository users;
+    private final UserBlockRepository userBlocks;
     private final ChatReadService reads;
     private final ChatNoticeRepository notices;
 
@@ -92,6 +95,11 @@ public class ChatRoomService {
                         .orElseThrow(() -> error(ChatErrorCode.SESSION_NOT_FOUND));
         if (session.getHostUser().getId().equals(userId)) {
             throw error(ChatErrorCode.HOST_DIRECT_ROOM_NOT_ALLOWED);
+        }
+        Long hostId = session.getHostUser().getId();
+        if (userBlocks.existsByBlockerIdAndBlockedId(userId, hostId)
+                || userBlocks.existsByBlockerIdAndBlockedId(hostId, userId)) {
+            throw error(ChatErrorCode.BLOCKED_USER_CHAT_NOT_ALLOWED);
         }
         User guest = users.findById(userId).orElseThrow(() -> error(ChatErrorCode.USER_NOT_FOUND));
         try {
@@ -170,6 +178,7 @@ public class ChatRoomService {
             ChatRoom room, ChatMessage lastMessage, int memberCount, String notice, long unread) {
         return new ChatRoomResponse(
                 room.getId(),
+                room.getHost().getId(),
                 room.getRoomType(),
                 room.getTitle(),
                 room.getSession().getId(),

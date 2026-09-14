@@ -3,9 +3,10 @@ package com.highpass.runspot.community.service;
 import com.highpass.runspot.auth.domain.User;
 import com.highpass.runspot.auth.domain.dao.UserRepository;
 import com.highpass.runspot.community.domain.*;
-import com.highpass.runspot.community.dto.*;
+import com.highpass.runspot.community.service.dto.request.*;
+import com.highpass.runspot.community.service.dto.response.*;
 import com.highpass.runspot.community.exception.*;
-import com.highpass.runspot.community.repository.*;
+import com.highpass.runspot.community.domain.dao.*;
 
 import lombok.RequiredArgsConstructor;
 

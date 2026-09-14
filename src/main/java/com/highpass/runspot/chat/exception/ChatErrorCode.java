@@ -15,7 +15,9 @@ public enum ChatErrorCode implements BaseExceptionType {
     HOST_DIRECT_ROOM_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "호스트는 자신에게 1:1 문의방을 만들 수 없습니다."),
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다."),
     CHAT_ROOM_CLOSED(HttpStatus.GONE, "종료된 채팅방에는 메시지를 보낼 수 없습니다."),
-    INVALID_CHAT_MESSAGE(HttpStatus.BAD_REQUEST, "메시지 유형에 맞는 내용을 입력해주세요.");
+    INVALID_CHAT_MESSAGE(HttpStatus.BAD_REQUEST, "메시지 유형에 맞는 내용을 입력해주세요."),
+    NOTICE_ONLY_FOR_GROUP_ROOM(HttpStatus.BAD_REQUEST, "공지는 그룹 채팅방에서만 등록할 수 있습니다."),
+    BLOCKED_USER_CHAT_NOT_ALLOWED(HttpStatus.FORBIDDEN, "차단된 사용자와는 채팅방을 생성할 수 없습니다.");
 
     private final HttpStatus status;
     private final String message;

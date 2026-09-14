@@ -121,5 +121,7 @@ public class Session extends BaseTimeEntity {
     public static class RoutePoint implements Serializable {
         private BigDecimal x;
         private BigDecimal y;
+        private String alias; // 마커 별칭
+        private String detail; // 마커 상세내용
     }
 }

@@ -4,11 +4,13 @@ import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.when;
 
 import com.highpass.runspot.auth.domain.User;
+import com.highpass.runspot.auth.domain.dao.UserBlockRepository;
 import com.highpass.runspot.auth.domain.dao.UserRepository;
 import com.highpass.runspot.chat.domain.*;
-import com.highpass.runspot.chat.dto.*;
+import com.highpass.runspot.chat.service.dto.request.*;
+import com.highpass.runspot.chat.service.dto.response.*;
 import com.highpass.runspot.chat.exception.*;
-import com.highpass.runspot.chat.repository.*;
+import com.highpass.runspot.chat.domain.dao.*;
 import com.highpass.runspot.session.domain.Session;
 import com.highpass.runspot.session.domain.dao.SessionRepository;
 
@@ -26,6 +28,7 @@ class ChatRoomServiceTest {
     @Mock ChatMessageRepository messages;
     @Mock SessionRepository sessions;
     @Mock UserRepository users;
+    @Mock UserBlockRepository userBlocks;
     @InjectMocks ChatRoomService service;
 
     @Test
@@ -50,5 +53,19 @@ class ChatRoomServiceTest {
                 .isInstanceOf(ChatException.class)
                 .hasFieldOrPropertyWithValue(
                         "exceptionType", ChatErrorCode.HOST_DIRECT_ROOM_NOT_ALLOWED);
+    }
+
+    @Test
+    void 차단_관계가_있으면_문의방을_만들_수_없다() {
+        User host = User.builder().id(1L).build();
+        Session session = Session.builder().id(10L).hostUser(host).build();
+        when(rooms.findBySessionIdAndGuestIdAndRoomType(10L, 2L, ChatRoomType.DIRECT))
+                .thenReturn(Optional.empty());
+        when(sessions.findById(10L)).thenReturn(Optional.of(session));
+        when(userBlocks.existsByBlockerIdAndBlockedId(2L, 1L)).thenReturn(true);
+        assertThatThrownBy(() -> service.direct(2L, new DirectRoomRequest(10L)))
+                .isInstanceOf(ChatException.class)
+                .hasFieldOrPropertyWithValue(
+                        "exceptionType", ChatErrorCode.BLOCKED_USER_CHAT_NOT_ALLOWED);
     }
 }
