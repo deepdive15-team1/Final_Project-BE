@@ -2,7 +2,7 @@ package com.highpass.runspot.chat.service;
 
 import com.highpass.runspot.chat.domain.ChatRoomMember;
 import com.highpass.runspot.chat.exception.*;
-import com.highpass.runspot.chat.repository.*;
+import com.highpass.runspot.chat.domain.dao.*;
 
 import lombok.RequiredArgsConstructor;
 
