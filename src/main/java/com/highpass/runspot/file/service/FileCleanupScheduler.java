@@ -1,7 +1,7 @@
 package com.highpass.runspot.file.service;
 
 import com.highpass.runspot.file.domain.UploadedFileStatus;
-import com.highpass.runspot.file.repository.UploadedFileRepository;
+import com.highpass.runspot.file.domain.dao.UploadedFileRepository;
 
 import lombok.RequiredArgsConstructor;
 

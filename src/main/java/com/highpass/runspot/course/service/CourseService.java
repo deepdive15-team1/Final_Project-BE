@@ -4,8 +4,8 @@ import com.highpass.runspot.auth.domain.User;
 import com.highpass.runspot.auth.domain.dao.UserRepository;
 import com.highpass.runspot.community.exception.*;
 import com.highpass.runspot.course.domain.*;
-import com.highpass.runspot.course.dto.RunningRecordResponse;
-import com.highpass.runspot.course.repository.*;
+import com.highpass.runspot.course.service.dto.response.RunningRecordResponse;
+import com.highpass.runspot.course.domain.dao.*;
 
 import lombok.RequiredArgsConstructor;
 
