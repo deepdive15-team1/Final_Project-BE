@@ -29,7 +29,9 @@ import org.hibernate.annotations.BatchSize;
 
 @Getter
 @Entity
-@Table(name = "posts")
+@Table(
+        name = "posts",
+        indexes = @Index(name = "idx_posts_status_like_count_id", columnList = "status,like_count,id"))
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Post extends BaseTimeEntity {
 
