@@ -73,7 +73,7 @@ class NotificationControllerTest {
 
     @Test
     void getNotificationsReturnsFeedWithDefaultSize() throws Exception {
-        given(notificationQueryService.getNotificationFeed(USER_ID, null, 20))
+        given(notificationQueryService.getNotificationFeed(USER_ID, null, 20, false))
                 .willReturn(new NotificationFeedResponse(List.of(notification()), 100L, true));
 
         mockMvc.perform(get(BASE_URL))
@@ -83,7 +83,23 @@ class NotificationControllerTest {
                 .andExpect(jsonPath("$.nextCursorId").value(100))
                 .andExpect(jsonPath("$.hasNext").value(true));
 
-        then(notificationQueryService).should().getNotificationFeed(USER_ID, null, 20);
+        then(notificationQueryService).should().getNotificationFeed(USER_ID, null, 20, false);
+    }
+
+    @Test
+    void getNotificationsForwardsUnreadOnly() throws Exception {
+        given(notificationQueryService.getNotificationFeed(USER_ID, 100L, 2, true))
+                .willReturn(new NotificationFeedResponse(List.of(notification()), null, false));
+
+        mockMvc.perform(get(BASE_URL)
+                        .param("cursorId", "100")
+                        .param("size", "2")
+                        .param("unreadOnly", "true"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.notifications[0].id").value(101))
+                .andExpect(jsonPath("$.hasNext").value(false));
+
+        then(notificationQueryService).should().getNotificationFeed(USER_ID, 100L, 2, true);
     }
 
     @Test
@@ -136,13 +152,13 @@ class NotificationControllerTest {
 
     @Test
     void getNotificationsReturnsBadRequestForInvalidCursorOrSize() throws Exception {
-        given(notificationQueryService.getNotificationFeed(USER_ID, null, 0))
+        given(notificationQueryService.getNotificationFeed(USER_ID, null, 0, false))
                 .willThrow(new IllegalArgumentException("size must be between 1 and 100."));
-        given(notificationQueryService.getNotificationFeed(USER_ID, null, 101))
+        given(notificationQueryService.getNotificationFeed(USER_ID, null, 101, false))
                 .willThrow(new IllegalArgumentException("size must be between 1 and 100."));
-        given(notificationQueryService.getNotificationFeed(USER_ID, 0L, 20))
+        given(notificationQueryService.getNotificationFeed(USER_ID, 0L, 20, false))
                 .willThrow(new IllegalArgumentException("cursorId must be positive."));
-        given(notificationQueryService.getNotificationFeed(USER_ID, -1L, 20))
+        given(notificationQueryService.getNotificationFeed(USER_ID, -1L, 20, false))
                 .willThrow(new IllegalArgumentException("cursorId must be positive."));
 
         mockMvc.perform(get(BASE_URL).param("size", "0")).andExpect(status().isBadRequest());

@@ -18,7 +18,15 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
 
     List<Notification> findByRecipientUserIdOrderByIdDesc(Long recipientUserId, Pageable pageable);
 
+    List<Notification> findByRecipientUserIdAndReadAtIsNullOrderByIdDesc(Long recipientUserId, Pageable pageable);
+
     List<Notification> findByRecipientUserIdAndIdLessThanOrderByIdDesc(
+            Long recipientUserId,
+            Long cursorId,
+            Pageable pageable
+    );
+
+    List<Notification> findByRecipientUserIdAndReadAtIsNullAndIdLessThanOrderByIdDesc(
             Long recipientUserId,
             Long cursorId,
             Pageable pageable

@@ -33,10 +33,16 @@ public class NotificationController {
     public ResponseEntity<NotificationFeedResponse> getNotifications(
             @RequestParam(required = false) Long cursorId,
             @RequestParam(defaultValue = "20") int size,
+            @RequestParam(defaultValue = "false") boolean unreadOnly,
             @AuthenticationPrincipal UserPrincipal userPrincipal
     ) {
         requireAuthenticated(userPrincipal);
-        return ResponseEntity.ok(notificationQueryService.getNotificationFeed(userPrincipal.getId(), cursorId, size));
+        return ResponseEntity.ok(notificationQueryService.getNotificationFeed(
+                userPrincipal.getId(),
+                cursorId,
+                size,
+                unreadOnly
+        ));
     }
 
     @Operation(summary = "읽지 않은 알림 개수 조회")

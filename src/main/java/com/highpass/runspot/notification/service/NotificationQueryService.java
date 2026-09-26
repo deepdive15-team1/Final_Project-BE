@@ -24,13 +24,30 @@ public class NotificationQueryService {
 
     private final NotificationRepository notificationRepository;
 
-    public NotificationFeedResponse getNotificationFeed(Long recipientUserId, Long cursorId, int size) {
+    public NotificationFeedResponse getNotificationFeed(
+            Long recipientUserId,
+            Long cursorId,
+            int size,
+            boolean unreadOnly
+    ) {
         validatePageRequest(cursorId, size);
 
         Pageable pageable = PageRequest.of(0, size + 1);
         List<Notification> notifications = new ArrayList<>(cursorId == null
-                ? notificationRepository.findByRecipientUserIdOrderByIdDesc(recipientUserId, pageable)
-                : notificationRepository.findByRecipientUserIdAndIdLessThanOrderByIdDesc(recipientUserId, cursorId, pageable));
+                ? unreadOnly
+                        ? notificationRepository.findByRecipientUserIdAndReadAtIsNullOrderByIdDesc(recipientUserId, pageable)
+                        : notificationRepository.findByRecipientUserIdOrderByIdDesc(recipientUserId, pageable)
+                : unreadOnly
+                        ? notificationRepository.findByRecipientUserIdAndReadAtIsNullAndIdLessThanOrderByIdDesc(
+                                recipientUserId,
+                                cursorId,
+                                pageable
+                        )
+                        : notificationRepository.findByRecipientUserIdAndIdLessThanOrderByIdDesc(
+                                recipientUserId,
+                                cursorId,
+                                pageable
+                        ));
 
         boolean hasNext = notifications.size() > size;
         if (hasNext) {

@@ -44,11 +44,12 @@ class NotificationQueryServiceTest extends MySqlContainerSupport {
 
     @Test
     void recipientCursorFeed는_수신자를_격리하고_내림차순으로_두페이지를_반환한다() {
-        NotificationFeedResponse firstPage = notificationQueryService.getNotificationFeed(RECIPIENT_USER_ID, null, 2);
+        NotificationFeedResponse firstPage = notificationQueryService.getNotificationFeed(RECIPIENT_USER_ID, null, 2, false);
         NotificationFeedResponse secondPage = notificationQueryService.getNotificationFeed(
                 RECIPIENT_USER_ID,
                 firstPage.nextCursorId(),
-                2
+                2,
+                false
         );
 
         assertThat(firstPage.notifications()).extracting(NotificationResponse::id).containsExactly(103L, 102L);
@@ -75,13 +76,36 @@ class NotificationQueryServiceTest extends MySqlContainerSupport {
     }
 
     @Test
+    void unreadOnly가_true이면_읽은_알림을_제외하고_커서_페이지를_이어간다() {
+        NotificationFeedResponse firstPage = notificationQueryService.getNotificationFeed(
+                RECIPIENT_USER_ID,
+                null,
+                1,
+                true
+        );
+        NotificationFeedResponse secondPage = notificationQueryService.getNotificationFeed(
+                RECIPIENT_USER_ID,
+                firstPage.nextCursorId(),
+                1,
+                true
+        );
+
+        assertThat(firstPage.notifications()).extracting(NotificationResponse::id).containsExactly(103L);
+        assertThat(firstPage.nextCursorId()).isEqualTo(103L);
+        assertThat(firstPage.hasNext()).isTrue();
+        assertThat(secondPage.notifications()).extracting(NotificationResponse::id).containsExactly(101L);
+        assertThat(secondPage.nextCursorId()).isEqualTo(101L);
+        assertThat(secondPage.hasNext()).isFalse();
+    }
+
+    @Test
     void unreadCount는_수신자별_readAtNull행만_계산한다() {
         assertThat(notificationQueryService.getUnreadCount(RECIPIENT_USER_ID).unreadCount()).isEqualTo(2L);
     }
 
     @Test
     void cursor이후_행이없으면_빈피드와_null커서를_반환한다() {
-        NotificationFeedResponse response = notificationQueryService.getNotificationFeed(RECIPIENT_USER_ID, 100L, 100);
+        NotificationFeedResponse response = notificationQueryService.getNotificationFeed(RECIPIENT_USER_ID, 100L, 100, false);
 
         assertThat(response.notifications()).isEmpty();
         assertThat(response.nextCursorId()).isNull();
@@ -91,13 +115,13 @@ class NotificationQueryServiceTest extends MySqlContainerSupport {
     @Test
     void invalidSize와_양수가아닌Cursor는_IllegalArgumentException이다() {
         assertThatIllegalArgumentException()
-                .isThrownBy(() -> notificationQueryService.getNotificationFeed(RECIPIENT_USER_ID, null, 0));
+                .isThrownBy(() -> notificationQueryService.getNotificationFeed(RECIPIENT_USER_ID, null, 0, false));
         assertThatIllegalArgumentException()
-                .isThrownBy(() -> notificationQueryService.getNotificationFeed(RECIPIENT_USER_ID, null, 101));
+                .isThrownBy(() -> notificationQueryService.getNotificationFeed(RECIPIENT_USER_ID, null, 101, false));
         assertThatIllegalArgumentException()
-                .isThrownBy(() -> notificationQueryService.getNotificationFeed(RECIPIENT_USER_ID, 0L, 1));
+                .isThrownBy(() -> notificationQueryService.getNotificationFeed(RECIPIENT_USER_ID, 0L, 1, false));
         assertThatIllegalArgumentException()
-                .isThrownBy(() -> notificationQueryService.getNotificationFeed(RECIPIENT_USER_ID, -1L, 1));
+                .isThrownBy(() -> notificationQueryService.getNotificationFeed(RECIPIENT_USER_ID, -1L, 1, false));
     }
 
     private void insertNotification(
