@@ -36,7 +36,9 @@ public interface PostRepository extends JpaRepository<Post, Long> {
                 + " 1 else 0 end where p.id = :id")
     void decrementCommentCount(@Param("id") Long id);
 
-    @EntityGraph(attributePaths = {"author", "images", "postTags", "postTags.tag"})
+    // 두 List를 동시에 fetch하면 MultipleBagFetchException이 발생한다.
+    // images는 Post의 @BatchSize로 서비스의 읽기 트랜잭션 안에서 조회한다.
+    @EntityGraph(attributePaths = {"author", "postTags", "postTags.tag"})
     List<Post> findByAuthorIdAndStatusOrderByUpdatedAtDesc(Long authorId, PostStatus status);
 
     @EntityGraph(attributePaths = {"author", "images"})
