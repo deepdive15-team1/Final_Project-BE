@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -43,11 +44,11 @@ public class CommunityInteractionService {
 
     @Transactional
     public void unlike(Long userId, Long postId) {
-        PostLike like =
-                likes.findByPostIdAndUserId(postId, userId)
-                        .orElseThrow(() -> error(CommunityErrorCode.LIKE_NOT_FOUND));
-        likes.delete(like);
-        posts.decrementLikeCount(postId);
+        post(postId);
+        // 재시도·동시 취소도 성공 처리하며 실제 삭제한 요청만 카운트를 감소시킨다.
+        if (likes.deleteLike(postId, userId) > 0) {
+            posts.decrementLikeCount(postId);
+        }
     }
 
     @Transactional
@@ -70,10 +71,13 @@ public class CommunityInteractionService {
     }
 
     public List<PostSummaryResponse> myScraps(Long userId) {
-        return scraps.findByUserIdOrderByIdDesc(userId).stream()
+        List<Post> savedPosts = scraps.findByUserIdOrderByIdDesc(userId).stream()
                 .map(PostScrap::getPost)
                 .filter(post -> post.getStatus() == PostStatus.PUBLISHED)
-                .map(PostSummaryResponse::from)
+                .toList();
+        Set<Long> likedIds = savedPosts.isEmpty() ? Set.of()
+                : likes.findLikedPostIds(userId, savedPosts.stream().map(Post::getId).toList());
+        return savedPosts.stream().map(post -> PostSummaryResponse.from(post, likedIds.contains(post.getId())))
                 .toList();
     }
 

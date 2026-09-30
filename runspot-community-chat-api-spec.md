@@ -226,6 +226,15 @@ com.highpass.runspot
 
 > ⚠️ `liked` / `scrapped` 같은 "내 상태" 필드를 목록 API에서 게시글마다 개별 쿼리로 채우면 즉시 N+1이 발생합니다. 목록 조회 시 **현재 페이지의 postId 목록으로 `IN` 쿼리 한 번**을 날려 Set으로 만든 뒤 매핑하세요.
 
+#### 좋아요 및 임시저장 API 보완
+
+- `GET /api/v1/posts`: 각 `items`에 `liked`를 반환합니다. 로그인 사용자의 좋아요 여부이며 비로그인 시 `false`입니다. 현재 페이지의 게시글 ID를 대상으로 한 번에 조회합니다.
+- `GET /api/v1/me/scraps`: 각 게시글에 로그인 사용자의 `liked`를 반환합니다.
+- `POST /api/v1/posts/{postId}/like`: 성공 시 본문 없는 `204`, 중복 등록 시 기존과 동일하게 `409`를 반환합니다.
+- `DELETE /api/v1/posts/{postId}/like`: 좋아요 내역이 없거나 이미 취소했어도 본문 없는 `204`를 반환합니다. 동시에 취소해도 실제 내역을 삭제한 요청만 `likeCount`를 감소시킵니다.
+- 등록·취소 모두 존재하지 않거나 DRAFT/DELETED 상태인 게시글은 `404`입니다. 좋아요 경로의 `postId`는 게시글 ID입니다.
+- `GET /api/v1/posts/drafts`: 로그인 사용자의 임시저장 목록을 배열로 반환합니다. 이미지·태그 List의 동시 fetch 오류를 피하도록 분리 조회합니다.
+
 #### 조회수 중복 방지 (Redis)
 
 ```

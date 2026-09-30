@@ -19,6 +19,7 @@ import com.highpass.runspot.course.domain.dao.RunningRecordRepository;
 import com.highpass.runspot.course.domain.dao.CourseScrapRepository;
 import com.highpass.runspot.file.service.S3PresignService;
 import java.util.List;
+import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Slice;
@@ -43,13 +44,17 @@ public class PostService {
     private final TagService tagService;
     private final PostViewService postViewService;
 
-    public PostListResponse getPosts(BoardType boardType, PostSort sort, String query, String cursor, int size) {
+    public PostListResponse getPosts(BoardType boardType, PostSort sort, String query, String cursor, int size,
+                                     Long viewerId) {
         int pageSize = Math.min(Math.max(size, 1), MAX_PAGE_SIZE);
         String normalizedQuery = StringUtils.hasText(query) ? query.trim() : null;
         Slice<Post> page = sort == PostSort.POPULAR
                 ? findPopular(boardType, normalizedQuery, cursor, pageSize)
                 : findLatest(boardType, normalizedQuery, cursor, pageSize);
-        List<PostSummaryResponse> items = page.getContent().stream().map(PostSummaryResponse::from).toList();
+        Set<Long> likedIds = viewerId == null || page.isEmpty() ? Set.of()
+                : postLikeRepository.findLikedPostIds(viewerId, page.getContent().stream().map(Post::getId).toList());
+        List<PostSummaryResponse> items = page.getContent().stream()
+                .map(post -> PostSummaryResponse.from(post, likedIds.contains(post.getId()))).toList();
         Post last = page.getContent().isEmpty() ? null : page.getContent().get(page.getContent().size() - 1);
         String nextCursor = last == null ? null
                 : sort == PostSort.POPULAR ? last.getLikeCount() + "_" + last.getId() : last.getId().toString();

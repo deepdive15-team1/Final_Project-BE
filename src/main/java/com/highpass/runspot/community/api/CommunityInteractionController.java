@@ -37,8 +37,9 @@ public class CommunityInteractionController {
         return ResponseEntity.noContent().build();
     }
 
-    @Operation(summary = "게시글 좋아요 취소")
+    @Operation(summary = "게시글 좋아요 취소", description = "발행된 게시글의 좋아요를 취소합니다. 이미 취소되었거나 좋아요 내역이 없어도 204를 반환합니다.")
     @ApiResponse(responseCode = "204", description = "취소 성공")
+    @ApiResponse(responseCode = "404", description = "게시글 없음 또는 미발행 상태")
     @DeleteMapping("/posts/{postId}/like")
     public ResponseEntity<Void> unlike(
             @PathVariable Long postId, @AuthenticationPrincipal UserPrincipal principal) {

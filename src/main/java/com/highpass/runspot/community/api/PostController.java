@@ -54,15 +54,17 @@ public class PostController {
     }
 
     @GetMapping
-    @Operation(summary = "게시글 목록 조회", description = "게시판 유형·정렬·검색 조건으로 게시글을 커서 기반 조회합니다.")
+    @Operation(summary = "게시글 목록 조회", description = "게시판 유형·정렬·검색 조건으로 게시글을 커서 기반 조회합니다. liked는 로그인 사용자의 좋아요 여부이며 비로그인 시 false입니다.")
     @ApiResponse(responseCode = "200", description = "조회 성공")
     public ResponseEntity<PostListResponse> getPosts(
             @RequestParam(required = false) BoardType boardType,
             @RequestParam(defaultValue = "LATEST") PostSort sort,
             @RequestParam(name = "q", required = false) String query,
             @RequestParam(required = false) String cursor,
-            @RequestParam(defaultValue = "20") int size) {
-        return ResponseEntity.ok(postService.getPosts(boardType, sort, query, cursor, size));
+            @RequestParam(defaultValue = "20") int size,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        return ResponseEntity.ok(postService.getPosts(boardType, sort, query, cursor, size,
+                principal == null ? null : principal.getId()));
     }
 
     @GetMapping("/{postId}")
