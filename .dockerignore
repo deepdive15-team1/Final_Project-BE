@@ -1,0 +1,16 @@
+.git
+.github
+.gradle
+.idea
+.omc
+.omo
+.claude
+.codegraph
+*.md
+src/test/
+gradle/
+gradlew
+gradlew.bat
+settings.gradle
+build.gradle
+compose.rabbitmq.yml

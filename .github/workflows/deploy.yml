@@ -1,16 +1,16 @@
-name: Deploy to EC2 with Gradle
+name: Deploy to EC2 with Docker
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      packages: write
 
-    # steps는 반드시 개별 job(build-and-deploy) 내부에 포함되어야 합니다.
     steps:
       # 1. 소스 코드 체크아웃
       - name: Checkout source code
@@ -24,35 +24,40 @@ jobs:
           distribution: 'temurin'
           cache: 'gradle'
 
-      # 3. Gradle 빌드 (Test 제외하여 속도 향상)
+      # 3. Gradle 빌드
       - name: Build with Gradle
         run: |
           chmod +x gradlew
           ./gradlew clean bootJar -x test
 
-      # 4. JAR 파일 EC2로 전송 (SCP)
-      - name: Copy JAR to EC2
+      # 4. GHCR 로그인
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # 5. Docker 이미지 빌드 및 푸시
+      - name: Build and Push Docker Image
+        run: |
+          OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          IMAGE=ghcr.io/$OWNER/final_project-be
+          docker build -t $IMAGE:latest -t $IMAGE:${{ github.sha }} .
+          docker push $IMAGE:latest
+          docker push $IMAGE:${{ github.sha }}
+
+      # 6. docker-compose.yml EC2로 복사
+      - name: Copy docker-compose.yml to EC2
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USERNAME }}
           key: ${{ secrets.EC2_SSH_KEY }}
-          source: "build/libs/*.jar"
-          target: "/home/${{ secrets.EC2_USERNAME }}/app_temp"
-          strip_components: 2
+          source: "docker-compose.yml"
+          target: "/home/${{ secrets.EC2_USERNAME }}/app"
 
-      # 5. Firebase 자격증명 복구 헬퍼를 EC2로 전송
-      - name: Copy Firebase credential restore helper
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USERNAME }}
-          key: ${{ secrets.EC2_SSH_KEY }}
-          source: "scripts/restore-firebase-service-account.sh"
-          target: "/home/${{ secrets.EC2_USERNAME }}/app_temp"
-          strip_components: 1
-
-      # 6. EC2에서 배포 스크립트 실행 (SSH)
+      # 7. EC2에서 배포
       - name: Deploy on EC2
         uses: appleboy/ssh-action@v1.0.3
         env:
@@ -64,24 +69,23 @@ jobs:
           envs: FIREBASE_SERVICE_ACCOUNT_JSON_BASE64
           script: |
             set -e
-            # 1. 배포 디렉토리 생성 (없을 경우)
-            mkdir -p ~/app
 
-            # 2. 전송된 JAR 이동 및 이름 변경
-            mv ~/app_temp/*.jar ~/app/server.jar
-            install -m 700 ~/app_temp/restore-firebase-service-account.sh ~/app/restore-firebase-service-account.sh
-            rm -rf ~/app_temp
+            mkdir -p ~/app/secrets
 
-            # 3. Firebase 서비스 계정 복구 및 검증
-            ~/app/restore-firebase-service-account.sh
+            sudo systemctl stop runspot 2>/dev/null || true
+            sudo systemctl disable runspot 2>/dev/null || true
 
-            # 4. 환경 변수 파일(.env) 생성/갱신
+            echo "$FIREBASE_SERVICE_ACCOUNT_JSON_BASE64" | base64 -d > ~/app/secrets/firebase-service-account.json
+            chmod 600 ~/app/secrets/firebase-service-account.json
+
             echo "DB_URL=${{ secrets.DB_URL }}" > ~/app/.env
             echo "DB_USERNAME=${{ secrets.DB_USERNAME }}" >> ~/app/.env
             echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> ~/app/.env
             echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> ~/app/.env
             echo "SENTRY_DSN=${{ secrets.SENTRY_DSN }}" >> ~/app/.env
-            echo "GOOGLE_APPLICATION_CREDENTIALS=/home/${{ secrets.EC2_USERNAME }}/app/secrets/firebase-service-account.json" >> ~/app/.env
+            echo "RABBITMQ_USERNAME=${{ secrets.RABBITMQ_USERNAME }}" >> ~/app/.env
+            echo "RABBITMQ_PASSWORD=${{ secrets.RABBITMQ_PASSWORD }}" >> ~/app/.env
+            echo "REDIS_PASSWORD=${{ secrets.REDIS_PASSWORD }}" >> ~/app/.env
             echo "PUSH_FCM_ENABLED=true" >> ~/app/.env
 
             echo "AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}" >> ~/app/.env
@@ -90,6 +94,9 @@ jobs:
             echo "AWS_S3_BUCKET=runspot-s3-bucket" >> ~/app/.env
             echo "AWS_S3_PUBLIC_BASE_URL=https://runspot-s3-bucket.s3.ap-northeast-2.amazonaws.com" >> ~/app/.env
 
-            # 5. 서비스 재시작 (해당 서비스가 systemd에 등록되어 있어야 함)
-            sudo systemctl restart runspot
-            sudo systemctl is-active --quiet runspot && echo "Deploy succeeded" || (echo "Deploy failed" && exit 1)
+            cd ~/app
+            docker compose pull app
+            docker compose up -d
+            sleep 5
+            docker compose ps
+            docker compose logs --tail=20 app

@@ -1,0 +1,66 @@
+services:
+  app:
+    image: ghcr.io/highpass-cloud/final_project-be:latest
+    container_name: runspot-app
+    ports:
+      - "8080:8080"
+    env_file: .env
+    environment:
+      RABBITMQ_HOST: rabbitmq
+      REDIS_HOST: redis
+      GOOGLE_APPLICATION_CREDENTIALS: /app/secrets/firebase-service-account.json
+      SPRING_PROFILES_ACTIVE: prod
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./secrets/firebase-service-account.json:/app/secrets/firebase-service-account.json:ro
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: 50m
+        max-file: "5"
+
+  rabbitmq:
+    image: rabbitmq:4.1-management
+    container_name: runspot-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USERNAME:-guest}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-guest}
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: 50m
+        max-file: "5"
+
+  redis:
+    image: redis:7-alpine
+    container_name: runspot-redis
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: 50m
+        max-file: "5"
+
+volumes:
+  rabbitmq-data:
+  redis-data:
