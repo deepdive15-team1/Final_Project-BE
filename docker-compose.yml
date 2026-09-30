@@ -1,6 +1,6 @@
 services:
   app:
-    image: ghcr.io/highpass-cloud/final_project-be:latest
+    image: ghcr.io/deepdive15-team1/final_project-be:latest
     container_name: runspot-app
     ports:
       - "8080:8080"
