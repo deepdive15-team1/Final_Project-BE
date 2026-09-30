@@ -10,6 +10,8 @@ services:
       REDIS_HOST: redis
       GOOGLE_APPLICATION_CREDENTIALS: /app/secrets/firebase-service-account.json
       SPRING_PROFILES_ACTIVE: prod
+      JAVA_OPTS: -Xmx768m -Xms256m
+    mem_limit: 1024m
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -30,6 +32,7 @@ services:
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_USERNAME:-guest}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-guest}
+    mem_limit: 384m
     volumes:
       - rabbitmq-data:/var/lib/rabbitmq
     healthcheck:
@@ -47,6 +50,7 @@ services:
   redis:
     image: redis:7-alpine
     container_name: runspot-redis
+    mem_limit: 128m
     volumes:
       - redis-data:/data
     healthcheck:
