@@ -1,6 +1,7 @@
 package com.highpass.runspot.chat.config;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
@@ -33,6 +34,32 @@ class StompHandlerTest {
 
     @Mock private JwtProvider jwt;
     @Mock private ChatRoomMemberRepository members;
+
+    @Test
+    void connectRequiresJwt() {
+        StompHandler handler = new StompHandler(jwt, members);
+        StompHeaderAccessor accessor = StompHeaderAccessor.create(StompCommand.CONNECT);
+        Message<byte[]> message = MessageBuilder.createMessage(new byte[0], accessor.getMessageHeaders());
+
+        assertThatThrownBy(() -> handler.preSend(message, null))
+                .isInstanceOf(MessagingException.class)
+                .hasMessageContaining("유효한 JWT가 필요합니다.");
+    }
+
+    @Test
+    void connectAuthenticatesValidJwt() {
+        StompHandler handler = new StompHandler(jwt, members);
+        when(jwt.validateToken("valid-token")).thenReturn(true);
+        when(jwt.getUserIdFromToken("valid-token")).thenReturn(1L);
+        StompHeaderAccessor accessor = StompHeaderAccessor.create(StompCommand.CONNECT);
+        accessor.setNativeHeader("Authorization", "Bearer valid-token");
+        accessor.setLeaveMutable(true);
+        Message<byte[]> message = MessageBuilder.createMessage(new byte[0], accessor.getMessageHeaders());
+
+        handler.preSend(message, null);
+
+        assertThat(accessor.getUser()).isEqualTo(new StompPrincipal(1L));
+    }
 
     @Test
     void 방_멤버가_아닌_사용자의_구독_시도는_전부_차단된다() {
