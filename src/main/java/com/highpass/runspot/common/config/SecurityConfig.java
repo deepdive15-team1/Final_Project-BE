@@ -43,7 +43,7 @@ public class SecurityConfig {
                         .requestMatchers("/auth/signup", "/auth/login", "/auth/refresh", "/auth/logout").permitAll()
                         .requestMatchers(HttpMethod.DELETE, "/auth/withdraw").authenticated()
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
-                        .requestMatchers("/ws-stomp/**").permitAll()
+                        .requestMatchers("/ws-stomp", "/ws-stomp/**").permitAll()
                         .requestMatchers(HttpMethod.GET,
                                 "/sessions/search",
                                 "/sessions/search/nearby",
@@ -93,6 +93,13 @@ public class SecurityConfig {
         configuration.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        // The handshake runs through Security's CorsFilter before the STOMP endpoint.
+        // Keep its origin policy aligned with StompWebSocketConfig; JWT authentication
+        // happens on the STOMP CONNECT frame, after the HTTP upgrade.
+        CorsConfiguration websocketConfiguration = new CorsConfiguration(configuration);
+        websocketConfiguration.setAllowedOriginPatterns(List.of("*"));
+        source.registerCorsConfiguration("/ws-stomp", websocketConfiguration);
+        source.registerCorsConfiguration("/ws-stomp/**", websocketConfiguration);
         source.registerCorsConfiguration("/**", configuration);
         return source;
     }
