@@ -96,10 +96,15 @@ public class Post extends BaseTimeEntity {
         this.content = content;
         this.runningRecordId = runningRecordId;
         this.status = status;
-        this.images.clear();
+        // Reuse occupied sort positions so INSERTs cannot collide with pending deletes.
         for (int i = 0; i < imageKeys.size(); i++) {
-            this.images.add(PostImage.create(this, imageKeys.get(i), i));
+            if (i < images.size()) {
+                images.get(i).updateImageKey(imageKeys.get(i));
+            } else {
+                images.add(PostImage.create(this, imageKeys.get(i), i));
+            }
         }
+        images.subList(imageKeys.size(), images.size()).clear();
     }
 
     public void validateOwner(Long userId) {
@@ -137,9 +142,23 @@ public class Post extends BaseTimeEntity {
     }
 
     public void replaceTags(List<Tag> tags) {
-        postTags.forEach(postTag -> postTag.getTag().unused());
-        postTags.clear();
-        tags.forEach(tag -> { tag.used(); postTags.add(PostTag.create(this, tag)); });
+        postTags.removeIf(postTag -> {
+            boolean removed = tags.stream().noneMatch(tag -> sameTag(tag, postTag.getTag()));
+            if (removed) {
+                postTag.getTag().unused();
+            }
+            return removed;
+        });
+        for (Tag tag : tags) {
+            if (postTags.stream().noneMatch(postTag -> sameTag(tag, postTag.getTag()))) {
+                tag.used();
+                postTags.add(PostTag.create(this, tag));
+            }
+        }
+    }
+
+    private boolean sameTag(Tag first, Tag second) {
+        return first == second || first.getId() != null && first.getId().equals(second.getId());
     }
 
     private static void validateCourse(BoardType boardType, Long runningRecordId) {

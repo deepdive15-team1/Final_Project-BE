@@ -37,6 +37,10 @@ public class PostImage {
     @Column(name = "sort_order", nullable = false)
     private int sortOrder;
 
+    void updateImageKey(String imageKey) {
+        this.imageKey = imageKey;
+    }
+
     static PostImage create(Post post, String imageKey, int sortOrder) {
         PostImage image = new PostImage();
         image.post = post;
