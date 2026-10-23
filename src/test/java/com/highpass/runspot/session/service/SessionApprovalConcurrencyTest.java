@@ -11,9 +11,9 @@ import com.highpass.runspot.chat.domain.ChatMemberRole;
 import com.highpass.runspot.chat.domain.ChatRoom;
 import com.highpass.runspot.chat.domain.ChatRoomMember;
 import com.highpass.runspot.chat.outbox.ChatOutboxRepository;
-import com.highpass.runspot.chat.repository.ChatMessageRepository;
-import com.highpass.runspot.chat.repository.ChatRoomMemberRepository;
-import com.highpass.runspot.chat.repository.ChatRoomRepository;
+import com.highpass.runspot.chat.domain.dao.ChatMessageRepository;
+import com.highpass.runspot.chat.domain.dao.ChatRoomMemberRepository;
+import com.highpass.runspot.chat.domain.dao.ChatRoomRepository;
 import com.highpass.runspot.common.util.GeometryUtil;
 import com.highpass.runspot.session.domain.GenderPolicy;
 import com.highpass.runspot.session.domain.ParticipationStatus;
@@ -155,7 +155,7 @@ class SessionApprovalConcurrencyTest extends MySqlContainerSupport {
                 .runType(RunType.RECOVERY)
                 .locationName("테스트 장소")
                 .location(GeometryUtil.createPoint(BigDecimal.ZERO, BigDecimal.ZERO))
-                .routePolyline(List.of(new Session.RoutePoint(BigDecimal.ZERO, BigDecimal.ZERO)))
+                .routePolyline(List.of(new Session.RoutePoint(BigDecimal.ZERO, BigDecimal.ZERO, null, null)))
                 .targetDistanceKm(BigDecimal.ONE)
                 .avgPaceSec(360)
                 .startAt(LocalDateTime.now().plusDays(1))

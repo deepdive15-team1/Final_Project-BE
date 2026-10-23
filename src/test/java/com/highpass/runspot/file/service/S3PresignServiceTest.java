@@ -14,6 +14,7 @@ import com.highpass.runspot.file.exception.FileException;
 import com.highpass.runspot.file.domain.dao.UploadedFileRepository;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.IntStream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -50,6 +51,29 @@ class S3PresignServiceTest {
                 new PresignedUrlRequest(FileDomain.POST, List.of(file))))
                 .isInstanceOf(FileException.class)
                 .hasFieldOrPropertyWithValue("exceptionType", FileErrorCode.INVALID_FILE_SIZE);
+    }
+
+    @Test
+    void 조회_URL은_키가_비어있으면_거부한다() {
+        assertThatThrownBy(() -> service.viewUrls(List.of()))
+                .isInstanceOf(FileException.class)
+                .hasFieldOrPropertyWithValue("exceptionType", FileErrorCode.INVALID_VIEW_COUNT);
+    }
+
+    @Test
+    void 조회_URL은_한번에_오십개를_초과할_수_없다() {
+        List<String> keys = IntStream.range(0, 51).mapToObj(index -> "posts/" + index + ".jpg").toList();
+        assertThatThrownBy(() -> service.viewUrls(keys))
+                .isInstanceOf(FileException.class)
+                .hasFieldOrPropertyWithValue("exceptionType", FileErrorCode.INVALID_VIEW_COUNT);
+    }
+
+    @Test
+    void 업로드_이력이_없는_키는_조회_URL을_발급하지_않는다() {
+        when(files.findByImageKeyIn(List.of("posts/unknown.jpg"))).thenReturn(List.of());
+        assertThatThrownBy(() -> service.viewUrls(List.of("posts/unknown.jpg")))
+                .isInstanceOf(FileException.class)
+                .hasFieldOrPropertyWithValue("exceptionType", FileErrorCode.INVALID_VIEW_KEY);
     }
 
     @Test

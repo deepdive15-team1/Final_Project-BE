@@ -12,4 +12,6 @@ public interface UploadedFileRepository extends JpaRepository<UploadedFile, Long
             UploadedFileStatus status, LocalDateTime before);
 
     List<UploadedFile> findByImageKeyInAndUserId(List<String> keys, Long userId);
+
+    List<UploadedFile> findByImageKeyIn(List<String> keys);
 }

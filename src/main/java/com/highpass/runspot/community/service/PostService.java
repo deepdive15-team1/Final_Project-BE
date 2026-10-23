@@ -54,7 +54,8 @@ public class PostService {
         Set<Long> likedIds = viewerId == null || page.isEmpty() ? Set.of()
                 : postLikeRepository.findLikedPostIds(viewerId, page.getContent().stream().map(Post::getId).toList());
         List<PostSummaryResponse> items = page.getContent().stream()
-                .map(post -> PostSummaryResponse.from(post, likedIds.contains(post.getId()))).toList();
+                .map(post -> PostSummaryResponse.from(post, likedIds.contains(post.getId()),
+                        s3PresignService::viewUrl)).toList();
         Post last = page.getContent().isEmpty() ? null : page.getContent().get(page.getContent().size() - 1);
         String nextCursor = last == null ? null
                 : sort == PostSort.POPULAR ? last.getLikeCount() + "_" + last.getId() : last.getId().toString();
@@ -69,7 +70,8 @@ public class PostService {
         boolean scrapped = viewerId != null && postScrapRepository.existsByPostIdAndUserId(postId, viewerId);
         boolean courseScrapped = viewerId != null && post.getRunningRecordId() != null
                 && courseScrapRepository.existsByRunningRecordIdAndUserId(post.getRunningRecordId(), viewerId);
-        return PostDetailResponse.from(post, viewerId, liked, scrapped, courseScrapped);
+        return PostDetailResponse.from(post, viewerId, liked, scrapped, courseScrapped,
+                s3PresignService::viewUrl);
     }
 
     @Transactional
@@ -82,7 +84,7 @@ public class PostService {
         Post saved = postRepository.save(post);
         saved.replaceTags(tagService.resolve(request.tags()));
         s3PresignService.link(userId, request.imageKeys());
-        return PostDetailResponse.from(saved, userId, false, false, false);
+        return PostDetailResponse.from(saved, userId, false, false, false, s3PresignService::viewUrl);
     }
 
     @Transactional
@@ -97,12 +99,14 @@ public class PostService {
         return PostDetailResponse.from(post, userId,
                 postLikeRepository.existsByPostIdAndUserId(postId, userId),
                 postScrapRepository.existsByPostIdAndUserId(postId, userId),
-                post.getRunningRecordId() != null && courseScrapRepository.existsByRunningRecordIdAndUserId(post.getRunningRecordId(), userId));
+                post.getRunningRecordId() != null && courseScrapRepository.existsByRunningRecordIdAndUserId(post.getRunningRecordId(), userId),
+                s3PresignService::viewUrl);
     }
 
     public List<PostDetailResponse> getDrafts(Long userId) {
         return postRepository.findByAuthorIdAndStatusOrderByUpdatedAtDesc(userId, PostStatus.DRAFT).stream()
-                .map(post -> PostDetailResponse.from(post, userId, false, false, false)).toList();
+                .map(post -> PostDetailResponse.from(post, userId, false, false, false,
+                        s3PresignService::viewUrl)).toList();
     }
 
     @Transactional
