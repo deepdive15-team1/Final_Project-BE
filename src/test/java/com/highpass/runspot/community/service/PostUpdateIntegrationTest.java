@@ -8,6 +8,7 @@ import com.highpass.runspot.community.service.dto.request.PostUpsertRequest;
 import com.highpass.runspot.file.domain.UploadedFile;
 import jakarta.persistence.EntityManager;
 import java.util.List;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,6 +24,35 @@ import org.springframework.transaction.annotation.Transactional;
 class PostUpdateIntegrationTest {
     @Autowired EntityManager em;
     @Autowired PostService service;
+
+    // 프론트가 상세 조회로 받은 imageKey를 그대로 돌려보내는 흐름. 과거에는 기존 이미지를 전부 지우고
+    // 같은 sort_order로 다시 INSERT하면서 uk_post_images_post_order 위반으로 500이 났다.
+    @Test
+    void 이미지를_그대로_두고_제목과_내용만_수정할_수_있다() {
+        User author = User.builder().username("same-image-author").password("password").name("author")
+                .ageGroup(AgeGroup.TWENTIES).gender(Gender.MALE).build();
+        em.persist(author);
+        for (String key : List.of("kept-first.jpg", "kept-second.jpg")) {
+            em.persist(UploadedFile.pending(key, author));
+        }
+        Post post = Post.create(author, BoardType.GENERAL, "before", "before content", null,
+                PostStatus.PUBLISHED, List.of("kept-first.jpg", "kept-second.jpg"));
+        em.persist(post);
+        em.flush();
+        em.clear();
+
+        service.updatePost(author.getId(), post.getId(), new PostUpsertRequest(
+                BoardType.GENERAL, "after", "after content", null,
+                List.of("kept-first.jpg", "kept-second.jpg"), List.of(), PostStatus.PUBLISHED));
+        em.flush();
+        em.clear();
+
+        Post updated = em.find(Post.class, post.getId());
+        assertThat(updated.getTitle()).isEqualTo("after");
+        assertThat(updated.getContent()).isEqualTo("after content");
+        assertThat(updated.getImages()).extracting(PostImage::getImageKey)
+                .containsExactly("kept-first.jpg", "kept-second.jpg");
+    }
 
     @ParameterizedTest
     @ValueSource(booleans = {true, false})

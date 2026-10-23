@@ -7,6 +7,7 @@ import com.highpass.runspot.community.service.dto.request.*;
 import com.highpass.runspot.community.service.dto.response.*;
 import com.highpass.runspot.community.exception.*;
 import com.highpass.runspot.community.domain.dao.*;
+import com.highpass.runspot.file.service.S3PresignService;
 
 import lombok.RequiredArgsConstructor;
 
@@ -27,6 +28,7 @@ public class CommunityInteractionService {
     private final CommentRepository comments;
     private final ReportRepository reports;
     private final UserRepository users;
+    private final S3PresignService images;
 
     @Transactional
     public void like(Long userId, Long postId) {
@@ -77,7 +79,8 @@ public class CommunityInteractionService {
                 .toList();
         Set<Long> likedIds = savedPosts.isEmpty() ? Set.of()
                 : likes.findLikedPostIds(userId, savedPosts.stream().map(Post::getId).toList());
-        return savedPosts.stream().map(post -> PostSummaryResponse.from(post, likedIds.contains(post.getId())))
+        return savedPosts.stream()
+                .map(post -> PostSummaryResponse.from(post, likedIds.contains(post.getId()), images::viewUrl))
                 .toList();
     }
 
