@@ -85,7 +85,7 @@ abstract class NotificationReminderIntegrationSupport extends MySqlContainerSupp
                 .runType(RunType.RECOVERY)
                 .locationName("테스트 장소")
                 .location(GeometryUtil.createPoint(BigDecimal.ZERO, BigDecimal.ZERO))
-                .routePolyline(List.of(new Session.RoutePoint(BigDecimal.ZERO, BigDecimal.ZERO)))
+                .routePolyline(List.of(new Session.RoutePoint(BigDecimal.ZERO, BigDecimal.ZERO, null, null)))
                 .targetDistanceKm(BigDecimal.ONE)
                 .avgPaceSec(360)
                 .startAt(startAt)

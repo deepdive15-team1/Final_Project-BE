@@ -6,6 +6,7 @@ import com.highpass.runspot.common.jwt.JwtAuthenticationFilter;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -28,8 +29,15 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 @RequiredArgsConstructor
 public class SecurityConfig {
 
+    private static final String DEFAULT_ALLOWED_ORIGINS =
+            "https://runspot-one.vercel.app,http://localhost:5173,https://api-ide.sjm00.link";
+
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final ObjectMapper objectMapper;
+
+    // 프론트 배포 주소가 바뀔 때마다 재배포하지 않도록 CORS_ALLOWED_ORIGINS로 덮어쓸 수 있게 둔다.
+    @Value("${app.cors.allowed-origin-patterns:" + DEFAULT_ALLOWED_ORIGINS + "}")
+    private List<String> allowedOriginPatterns;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -82,10 +90,7 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOriginPatterns(List.of(
-                "https://runspot-one.vercel.app",
-                "http://localhost:5173",
-                "https://api-ide.sjm00.link"));
+        configuration.setAllowedOriginPatterns(allowedOriginPatterns);
         configuration.setAllowedMethods(List.of("*"));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setExposedHeaders(List.of("*"));

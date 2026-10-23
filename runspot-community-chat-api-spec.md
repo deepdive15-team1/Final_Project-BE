@@ -177,6 +177,8 @@ com.highpass.runspot
 | GET | `/api/v1/me/courses` | 저장한 코스 목록 | 필수 |
 | GET | `/api/v1/posts/drafts` | 임시저장 목록 | 필수 |
 | POST | `/api/v1/posts/drafts` | 임시저장 | 필수 |
+| POST | `/api/v1/files/presigned-urls` | 업로드용 PUT URL 발급 | 필수 |
+| GET | `/api/v1/files/view-urls` | 조회용 GET URL 발급 (`keys` 반복, 최대 50) | 필수 |
 
 #### 게시글 작성 요청/응답
 
@@ -204,7 +206,8 @@ com.highpass.runspot
   "title": "여의도 한강공원 코스 - 5km",
   "content": "...",
   "author": { "userId": 7, "nickname": "러너킴", "profileImageUrl": "...", "mannerTemperature": 36.5 },
-  "images": ["https://cdn.../uuid-1.jpg"],
+  "imageKeys": ["posts/2026/08/30/uuid-1.jpg"],
+  "imageUrls": ["https://runspot-s3-bucket.s3.../uuid-1.jpg?X-Amz-Signature=..."],  // 1시간 유효
   "tags": ["여의도러닝", "한강공원"],
   "course": {                        // boardType == COURSE 일 때만
     "runningRecordId": 1025,
@@ -532,6 +535,35 @@ public void on(ParticipantApprovedEvent e) { ... }
   }]
 }
 ```
+
+### 5.1-1 이미지 조회 — Presigned GET URL
+
+버킷은 비공개이므로 `https://{bucket}.s3.{region}.amazonaws.com/{imageKey}`로 바로 GET하면 **403**이 납니다.
+응답에 담긴 `imageKey`는 조회 URL이 아니라 S3 객체 키입니다.
+
+```jsonc
+// GET /api/v1/files/view-urls?keys=posts/2026/10/24/a.jpg&keys=posts/2026/10/24/b.jpg
+// 응답
+{
+  "items": [{
+    "imageKey": "posts/2026/10/24/a.jpg",
+    "viewUrl": "https://runspot-s3-bucket.s3.ap-northeast-2.amazonaws.com/posts/...&X-Amz-Signature=...",
+    "expiresIn": 3600
+  }]
+}
+```
+
+| 항목 | 값 |
+|---|---|
+| 최대 개수 | 50개 (`keys` 파라미터 반복) |
+| URL 유효시간 | 1시간 |
+| 인증 | 필수 |
+| 400 | `keys`가 비었거나 50개 초과 |
+| 404 | 업로드 이력(`uploaded_files`)이 없는 키 |
+
+게시글 **목록·상세 응답에는 이미 서명된 URL이 함께 내려가므로** 이 API를 따로 호출하지 않아도 됩니다.
+목록은 `thumbnailKey`와 함께 `thumbnailUrl`을, 상세는 `imageKeys`와 함께 같은 순서의 `imageUrls`를 돌려줍니다.
+채팅·프로필처럼 응답에 키만 있는 경우에만 이 API를 쓰세요.
 
 ### 5.2 검증 규칙
 

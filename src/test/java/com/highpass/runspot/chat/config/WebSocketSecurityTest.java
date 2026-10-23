@@ -5,6 +5,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.highpass.runspot.common.config.SecurityConfig;
 import com.highpass.runspot.common.jwt.JwtAuthenticationFilter;
 import com.highpass.runspot.common.jwt.JwtProvider;
@@ -14,6 +15,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
+import org.springframework.context.support.PropertySourcesPlaceholderConfigurer;
 import org.springframework.security.web.FilterChainProxy;
 import org.springframework.test.context.junit.jupiter.SpringJUnitConfig;
 import org.springframework.test.context.web.WebAppConfiguration;
@@ -62,13 +64,23 @@ class WebSocketSecurityTest {
 
     @Test
     void privateRestStillRequiresAuthentication() throws Exception {
-        mvc.perform(get("/private")).andExpect(status().isForbidden());
+        mvc.perform(get("/private")).andExpect(status().isUnauthorized());
     }
 
     @Configuration
     @EnableWebMvc
     @Import(SecurityConfig.class)
     static class Config {
+        @Bean
+        static PropertySourcesPlaceholderConfigurer propertySourcesPlaceholderConfigurer() {
+            return new PropertySourcesPlaceholderConfigurer();
+        }
+
+        @Bean
+        ObjectMapper objectMapper() {
+            return new ObjectMapper();
+        }
+
         @Bean
         JwtAuthenticationFilter jwtAuthenticationFilter() {
             return new JwtAuthenticationFilter(mock(JwtProvider.class));
